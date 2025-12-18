@@ -9,3 +9,4 @@ console.log('✅ Supabase configured:', window.__SUPABASE_URL);
   Never commit service_role keys to the repository.
   Always use Row Level Security (RLS) in your Supabase database.
 */
+
