@@ -13,14 +13,9 @@
 //
 // For static site deployment, use Vercel's environment variable injection
 
-// Load from environment variables (injected at build/runtime)
-window.__SUPABASE_URL = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL 
-  ? process.env.NEXT_PUBLIC_SUPABASE_URL 
-  : (window.ENV && window.ENV.NEXT_PUBLIC_SUPABASE_URL) || '';
-
-window.__SUPABASE_ANON_KEY = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  : (window.ENV && window.ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY) || '';
+// Supabase configuration for static site
+window.__SUPABASE_URL = 'https://fccxkgfytweojfflvfnx.supabase.co';
+window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjY3hrZ2Z5dHdlb2pmZmx2Zm54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwNTcxNDMsImV4cCI6MjA4MTYzMzE0M30.fEnMNwGh7cbr9s8A58gTgoe0qqbEZmdiOxlaMrMxCOs';
 
 if (!window.__SUPABASE_URL || !window.__SUPABASE_ANON_KEY) {
   console.warn('⚠️ Supabase configuration missing. Please set environment variables.');

@@ -1,25 +1,7 @@
 // API Configuration for Frontend
-// Uses environment variables for different deployment environments
+const API_BASE_URL = 'https://pig-3k5m.onrender.com/api/v1';
 
-const getApiUrl = () => {
-  // Check if running in browser
-  if (typeof window !== 'undefined') {
-    // Try to get from window.ENV (injected by Vercel)
-    if (window.ENV && window.ENV.NEXT_PUBLIC_API_URL) {
-      return window.ENV.NEXT_PUBLIC_API_URL;
-    }
-  }
-  
-  // Fallback to process.env for Next.js
-  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  // Default for local development
-  return 'http://localhost:3001/api/v1';
-};
-
-export const API_BASE_URL = getApiUrl();
+export { API_BASE_URL };
 
 // API Client Helper
 export class ApiClient {
