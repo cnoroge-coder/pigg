@@ -18,10 +18,7 @@
 window.__SUPABASE_URL = 'https://fccxkgfytweojfflvfnx.supabase.co';
 window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjY3hrZ2Z5dHdlb2pmZmx2Zm54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwNTcxNDMsImV4cCI6MjA4MTYzMzE0M30.fEnMNwGh7cbr9s8A58gTgoe0qqbEZmdiOxlaMrMxCOs';
 
-if (!window.__SUPABASE_URL || !window.__SUPABASE_ANON_KEY) {
-  console.error('❌ Supabase configuration error!');
-  throw new Error('Supabase credentials not configured');
-}
+console.log('✅ Supabase configured:', window.__SUPABASE_URL);
 
 /*
   Security note: Only use the anon key for client-side code.
