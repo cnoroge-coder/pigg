@@ -11,8 +11,26 @@ async function bootstrap() {
     ? process.env.CORS_ORIGINS.split(',')
     : ['http://localhost:3000'];
 
+  // Allow Vercel preview deployments
+  const allowedOrigins = [
+    ...corsOrigins,
+    /\.vercel\.app$/,  // All Vercel preview URLs
+  ];
+
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin matches allowed patterns
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') return origin === allowed;
+        if (allowed instanceof RegExp) return allowed.test(origin);
+        return false;
+      });
+      
+      callback(null, isAllowed);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

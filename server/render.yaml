@@ -1,19 +1,14 @@
 # Render Deployment Configuration for Backend
-# This file tells Render how to build and run your NestJS backend
 
-# Build Command
-build:
-  npm install && npm run build && npm run prisma:generate
-
-# Start Command  
-start:
-  npm run start:prod
-
-# Environment
-environment: node
-
-# Healthcheck endpoint
-healthCheckPath: /api/v1/health
-
-# Auto-deploy
-autoDeploy: true
+services:
+  - type: web
+    name: pig-farm-api
+    env: node
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm run start:prod
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001

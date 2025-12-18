@@ -17,30 +17,37 @@ export class AnimalsService {
   }
 
   async findAll() {
-    // TODO: Implement with Prisma
-    // return this.prisma.animal.findMany();
-    return {
-      message: 'All animals',
-      data: [],
-    };
+    try {
+      const animals = await this.prisma.animal.findMany();
+      return animals;
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
   }
 
   async findAllSows() {
-    // TODO: Implement with Prisma
-    // return this.prisma.sow.findMany();
-    return {
-      message: 'All sows',
-      data: [],
-    };
+    try {
+      const sows = await this.prisma.animal.findMany({
+        where: { type: 'sow' },
+      });
+      return sows;
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
   }
 
   async findAllBoars() {
-    // TODO: Implement with Prisma
-    // return this.prisma.boar.findMany();
-    return {
-      message: 'All boars',
-      data: [],
-    };
+    try {
+      const boars = await this.prisma.animal.findMany({
+        where: { type: 'boar' },
+      });
+      return boars;
+    } catch (error) {
+      console.error('Database error:', error);
+      return [];
+    }
   }
 
   async findOne(id: string) {
