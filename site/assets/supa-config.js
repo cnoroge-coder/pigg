@@ -1,23 +1,33 @@
-// Supabase configuration placeholder
-// Add your Supabase project URL and ANON key here for local testing.
-// For production on Vercel, set these values using environment variable injection
-// (do NOT commit service_role keys to the repo).
+// Supabase configuration
+// SECURITY: API keys removed from code and moved to environment variables
+// 
+// For local development:
+// 1. Copy .env.example to .env.local
+// 2. Add your Supabase URL and ANON key to .env.local
+// 3. These will be injected at build time
+//
+// For production (Vercel):
+// Set these in Vercel dashboard under Environment Variables:
+// - NEXT_PUBLIC_SUPABASE_URL
+// - NEXT_PUBLIC_SUPABASE_ANON_KEY
+//
+// For static site deployment, use Vercel's environment variable injection
 
-// Example (replace with your values):
-// window.__SUPABASE_URL = 'https://xyzcompany.supabase.co';
-// window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJI...';
+// Load from environment variables (injected at build/runtime)
+window.__SUPABASE_URL = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL 
+  ? process.env.NEXT_PUBLIC_SUPABASE_URL 
+  : (window.ENV && window.ENV.NEXT_PUBLIC_SUPABASE_URL) || '';
 
-// For convenience you've provided the project keys — they are set below so the
-// static site will initialize the Supabase client automatically when loaded.
-// If you later deploy to a public host, prefer injecting these via environment
-// variables at deploy time (Vercel). Do NOT commit service_role keys here.
+window.__SUPABASE_ANON_KEY = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  : (window.ENV && window.ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY) || '';
 
-window.__SUPABASE_URL = 'https://kwsdhxpwovibxejpjrse.supabase.co';
-window.__SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c2RoeHB3b3ZpYnhlanBqcnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTY5MDMsImV4cCI6MjA3OTk5MjkwM30.HQ8gdHmi8nwRRp_4SV6wR45hyDbc-eO-1ZImTUn0TBc';
+if (!window.__SUPABASE_URL || !window.__SUPABASE_ANON_KEY) {
+  console.warn('⚠️ Supabase configuration missing. Please set environment variables.');
+}
 
 /*
-  Security note: the anon key is safe for client usage only when combined with
-  Row Level Security (RLS). Do not put service_role keys here. If you prefer not
-  to store keys in the repo, inject them at deploy time (Vercel environment
-  variables) or set them on the page by your hosting configuration.
+  Security note: Only use the anon key for client-side code.
+  Never commit service_role keys to the repository.
+  Always use Row Level Security (RLS) in your Supabase database.
 */
