@@ -73,7 +73,7 @@
             setMessage('Storage not available — image not uploaded','warning');
           } else {
             try{
-              const bucket = 'pigs';
+              const bucket = 'pig';
               const name = data.photo.name || (data.tagNo || 'pig');
               const extMatch = name.match(/\.([a-zA-Z0-9]+)$/);
               const ext = extMatch? '.'+extMatch[1] : '';
