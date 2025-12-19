@@ -41,17 +41,21 @@
 
     <!-- Tabs -->
     <div style="display:flex;gap:8px;margin:20px 0 12px">
-      <button id="tabDetails" class="btn active">Details</button>
       <button id="tabWeight" class="btn">Weight History</button>
       <button id="tabFeed" class="btn">Feed Records</button>
-      <button id="tabEvents" class="btn">Events</button>
+      <button id="tabStatus" class="btn">Status</button>
     </div>
 
+    <!-- Main Content (Details + Events always visible) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div id="detailsPane"></div>
+      <div id="eventsPane"></div>
+    </div>
+    
     <!-- Tab Content -->
-    <div id="detailsPane"></div>
     <div id="weightPane" style="display:none"></div>
     <div id="feedPane" style="display:none"></div>
-    <div id="eventsPane" style="display:none"></div>
+    <div id="statusPane" style="display:none"></div>
   </main>
 
   <!-- Modal for adding weight -->
