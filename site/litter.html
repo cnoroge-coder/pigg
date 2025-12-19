@@ -162,8 +162,10 @@ function setupLitterEvents(litter){
 			      <img src="/pics/Pig.jpeg" alt="logo" style="width:76px;height:76px;object-fit:cover;border-radius:8px;margin-bottom:8px" />
 			    </div>
 			    <div>
-			      <div class="small">Sow</div>
-			      <div style="font-weight:700">${(sow&&sow.name)||litter.sowTag}</div>
+			      <div class="small">Mother (Sow)</div>
+			      <div style="font-weight:700">
+			        <a href="pig.html?id=${litter.sowTag}" style="color:#3b82f6;text-decoration:none;cursor:pointer">${(sow&&sow.name)||litter.sowTag}</a>
+			      </div>
 			      <div class="small" style="color:var(--muted);">Litter ID: ${litter.id}</div>
 			      <div style="height:8px"></div>
 			      <div class="small">Born</div>
@@ -185,6 +187,20 @@ function setupLitterEvents(litter){
 
 			  <div style="height:12px"></div>
 			  <div class="small">Number in litter</div><div style="font-weight:700">${(litter.piglets||[]).length}</div>
+			  <div style="height:8px"></div>
+			  
+			  <div class="small" style="margin-top:12px;margin-bottom:4px;font-weight:600">Piglets in this litter:</div>
+			  ${(litter.piglets||[]).length === 0 ? 
+			    '<div class="small" style="color:var(--muted)">No piglets recorded</div>' : 
+			    (litter.piglets||[]).map(p => `
+			      <div style="padding:4px 0">
+			        <a href="piglet.html?id=${p.id}" style="color:#3b82f6;text-decoration:none;cursor:pointer">
+			          ${p.tagNo || p.id} - ${p.sex || 'Unknown'} - ${p.status || 'Active'}
+			        </a>
+			      </div>
+			    `).join('')
+			  }
+			  
 			  <div style="height:8px"></div>
 			  <div class="small">Health notes</div>
 			  <div>${healthNotes}</div>
