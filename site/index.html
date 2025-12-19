@@ -77,17 +77,39 @@
     const { AnimalsModule } = window.Modules;
     const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
     
-    // Separate piglets by gender
+    // Load piglets from API
+    let allPiglets = [];
+    try {
+      const pigletsResponse = await fetch(`${API_BASE_URL}/piglets`);
+      if (pigletsResponse.ok) {
+        allPiglets = await pigletsResponse.json();
+      }
+    } catch (error) {
+      console.error('Error loading piglets:', error);
+    }
+    
+    // Separate piglets by gender (use sex field for piglets)
     const piglets = Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets : [];
-    const malePiglets = piglets.filter(p => p.gender && p.gender.toLowerCase().startsWith('m'));
-    const femalePiglets = piglets.filter(p => p.gender && p.gender.toLowerCase().startsWith('f'));
-    const unknownPiglets = piglets.filter(p => !p.gender || (!p.gender.toLowerCase().startsWith('m') && !p.gender.toLowerCase().startsWith('f')));
+    const combinedPiglets = [...piglets, ...allPiglets];
+    const malePiglets = combinedPiglets.filter(p => {
+      const gender = p.gender || p.sex || '';
+      return gender.toLowerCase().startsWith('m');
+    });
+    const femalePiglets = combinedPiglets.filter(p => {
+      const gender = p.gender || p.sex || '';
+      return gender.toLowerCase().startsWith('f');
+    });
+    const unknownPiglets = combinedPiglets.filter(p => {
+      const gender = p.gender || p.sex || '';
+      return !gender || (!gender.toLowerCase().startsWith('m') && !gender.toLowerCase().startsWith('f'));
+    });
     
-    // Calculate litters (placeholder - will need actual litter data)
-    const totalLitters = 0; // TODO: Get from LittersModule when implemented
-    const nursingLitters = 0; // TODO: Get from LittersModule when implemented
+    // Calculate litters from AnimalsModule
+    const litters = AnimalsModule.litters || [];
+    const totalLitters = litters.length;
+    const nursingLitters = litters.filter(l => !l.weaningDate).length;
     
-    const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + piglets.length;
+    const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + combinedPiglets.length;
     
     // Populate Key Metrics tiles
     const tiles = document.getElementById('tiles');
@@ -97,8 +119,8 @@
       {label:'Total Animals', value:totalPigs, link: null},
       {label:'Sows', value:AnimalsModule.sows.length, link: 'sows.html'},
       {label:'Boars', value:AnimalsModule.boars.length, link: 'boars.html'},
-      {label:'Total Piglets', value:piglets.length, link: 'piglets.html'},
-      {label:'Male Piglets', value:malePiglets.length + unknownPiglets.length, link: 'piglets.html'},
+      {label:'Total Piglets', value:combinedPiglets.length, link: 'piglets.html'},
+      {label:'Male Piglets', value:malePiglets.length, link: 'piglets.html'},
       {label:'Female Piglets', value:femalePiglets.length, link: 'piglets.html'},
       {label:'Total Litters', value:totalLitters, link: 'litters.html'},
       {label:'Nursing Litters', value:nursingLitters, link: 'litters.html'}
@@ -118,14 +140,14 @@
     // Load and display mature piglets alerts
     try {
       const response = await fetch(`${API_BASE_URL}/piglets`);
-      const allPiglets = await response.json();
+      const loadedPiglets = await response.json();
       const today = new Date();
       
       const alertsDiv = document.getElementById('alerts');
       alertsDiv.innerHTML = '';
       
       // Check for mature piglets
-      const maturePiglets = allPiglets.filter(p => {
+      const maturePiglets = loadedPiglets.filter(p => {
         if (p.maturityWeeks && p.maturitySetDate) {
           const setDate = new Date(p.maturitySetDate);
           const weeksPassed = Math.floor((today - setDate) / (7 * 24 * 60 * 60 * 1000));

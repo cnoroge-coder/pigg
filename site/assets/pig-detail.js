@@ -53,6 +53,9 @@
     const tag = param('tag');
     if(!tag) return qs('detailContent').textContent = 'No pig selected';
     
+    let pig = null; // Declare pig in outer scope
+    let isBoar = false; // Declare isBoar in outer scope
+    
     // Wait for animals to be loaded from API
     function loadPigData() {
       if (!window.Modules || !window.Modules.AnimalsModule) {
@@ -61,11 +64,11 @@
       }
       
       const AnimalsModule = window.Modules.AnimalsModule;
-      const pig = AnimalsModule.getByTag(tag) || AnimalsModule.getSow(tag) || AnimalsModule.boars.find(b=>b.tagNo===tag);
+      pig = AnimalsModule.getByTag(tag) || AnimalsModule.getSow(tag) || AnimalsModule.boars.find(b=>b.tagNo===tag);
       if(!pig) return qs('detailContent').textContent = 'Pig not found';
 
   // determine if this is a boar to avoid showing pregnancies UI for boars
-  const isBoar = (AnimalsModule.boars || []).some(b=> b.tagNo === pig.tagNo);
+  isBoar = (AnimalsModule.boars || []).some(b=> b.tagNo === pig.tagNo);
   // hide pregnancy tab/button for boars in the header and the alternate pane add button
   const pregTabBtn = qs('tabPreg'); if(isBoar && pregTabBtn) pregTabBtn.style.display = 'none';
   const addPregBtn = qs('addPregBtn'); if(isBoar && addPregBtn) addPregBtn.style.display = 'none';
@@ -123,6 +126,12 @@
     // Render inline events and pregnancies
     function renderEventsInline(targetId='eventsList', allowEmptyMessage=true){
       const eventsRoot = qs(targetId); if(!eventsRoot) return; eventsRoot.innerHTML='';
+      
+      // Check if pig is loaded
+      if (!pig) {
+        if(allowEmptyMessage) eventsRoot.innerHTML='<div class="small">Loading...</div>';
+        return;
+      }
       
       // Check if EventsModule exists
       if (!window.Modules || !window.Modules.EventsModule) {
@@ -202,7 +211,7 @@
   showPane('upcoming');
 
     function renderPregsInline(){
-      if(isBoar) return; // no pregnancies for boars
+      if(!pig || isBoar) return; // no pregnancies for boars or if pig not loaded
       const root = qs('pregList'); if(!root) return; root.innerHTML='';
       const all = (window.Modules.AnimalsModule.getBreedingFor(pig.tagNo) || []).concat(window.Modules.AnimalsModule.getBreedingFor(pig.name||'') || []);
       // dedupe
@@ -232,7 +241,8 @@
 
     // render a compact pregnancy block used in the Upcoming pane
     function renderPregsInlineForUpcoming(){
-      if(isBoar) return; const root = qs('upcomingPregList'); if(!root) return; root.innerHTML='';
+      if(!pig || isBoar) return; 
+      const root = qs('upcomingPregList'); if(!root) return; root.innerHTML='';
       const all = (window.Modules.AnimalsModule.getBreedingFor(pig.tagNo) || []).concat(window.Modules.AnimalsModule.getBreedingFor(pig.name||'') || []);
       const map = {}; all.forEach(r=> map[JSON.stringify(r)] = r);
       const rows = Object.values(map).sort((a,b)=> new Date(a.expectedFarrowing||0)- new Date(b.expectedFarrowing||0));
@@ -246,6 +256,7 @@
 
     // populate the details preview in the Upcoming pane with live pig data
     function populateUpcomingDetailsPreview(){
+      if(!pig) return;
       const el = qs('detailContentPreview'); if(!el) return;
       const g = pig.gender || (AnimalsModule.sows.includes(pig)?'Female':'Male');
       el.innerHTML = `
