@@ -326,66 +326,68 @@
     getByTag(tag){ return this.sows.find(s=>s.tagNo===tag) || this.boars.find(b=>b.tagNo===tag) || this.litters.flatMap(l=>l.piglets||[]).find(p=>p.tagNo===tag); },
     listAllTags(){ return [...this.sows.map(s=>s.tagNo), ...this.boars.map(b=>b.tagNo), ...this.litters.flatMap(l=> (l.piglets||[]).map(p=>p.tagNo))]; },
     get piglets(){ return this.litters.reduce((sum,l)=> sum + (l.piglets? l.piglets.length:0), 0); },
-    addPig(pig){
-      // pig: {tagNo, name, breed, gender, litterNo, weight, dob, entryDate, group, obtainedMethod, motherTag, fatherTag, notes}
+    async addPig(pig){
+      // pig: {tagNo, name, breed, gender, litterNo, weight, dob, entryDate, group, obtainedMethod, motherTag, fatherTag, notes, imageUrl}
       if(!pig || !pig.tagNo) return { ok:false, error:'Tag number required' };
       if(this.listAllTags().includes(pig.tagNo)) return { ok:false, error:'Tag already exists' };
-      if(!pig.gender) return { ok:false, error:'Gender required' };
       if(!pig.obtainedMethod) return { ok:false, error:'Obtained method required' };
-      const base = {
-        id: pig.tagNo,
-        tagNo: pig.tagNo,
-        name: pig.name||pig.tagNo,
-        imageUrl: pig.imageUrl || pig.image || pig.image_url || null,
-        breed: pig.breed||'Unknown',
-        dob: pig.dob||'',
-        notes: pig.notes||''
-      };
-      if(pig.gender.toLowerCase().startsWith('f')){
-        const sow = Object.assign(base, {
-          expectedFarrow: pig.dob? window.Modules?.BreedingModule?.predictFarrow(pig.dob) : '',
-          weightHistory: pig.weight? [Number(pig.weight)] : [],
-          status: 'Growing',
-          group: pig.group||'',
-          obtainedMethod: pig.obtainedMethod||''
-        });
-        this.sows.push(sow);
-      }else{
-        const boar = Object.assign(base, {
-          uses: 0,
-          fertility: 0.7,
-          group: pig.group||'',
-          obtainedMethod: pig.obtainedMethod||''
-        });
-        this.boars.push(boar);
+      
+      // Determine type from gender or tag
+      let type = 'piglet';
+      if(pig.gender){
+        if(pig.gender.toLowerCase().startsWith('f')) type = 'sow';
+        else if(pig.gender.toLowerCase().startsWith('m')) type = 'boar';
       }
-      // Persist minimal new animals list
+      
+      // Use backend API
       try{
-        localStorage.setItem('pf_animals', JSON.stringify({
-          sows: this.sows.filter(x=>!x.id.startsWith('sow') && !x.id.startsWith('boar')), // only user-added
-          boars: this.boars.filter(x=>!x.id.startsWith('sow') && !x.id.startsWith('boar'))
-        }));
-      }catch(e){ /* ignore quota errors */ }
-
-      // Attempt to persist new animal to Supabase asynchronously
-      (async ()=>{
-        try{
-          const row = mapAnimalRow(pig.gender && pig.gender.toLowerCase().startsWith('f')? Object.assign({}, pig, { type: 'sow'}) : Object.assign({}, pig, { type: 'boar'}));
-          const res = await trySupabaseInsert('animals', row);
-          if(res && res.error){
-            // nothing more to do; mark unsynced
-            const list = pig.gender && pig.gender.toLowerCase().startsWith('f')? this.sows : this.boars;
-            const created = list.find(x=>x.tagNo===pig.tagNo);
-            if(created) created._syncError = true;
-          }else if(res && res.id){
-            const list = pig.gender && pig.gender.toLowerCase().startsWith('f')? this.sows : this.boars;
-            const created = list.find(x=>x.tagNo===pig.tagNo);
-            if(created){ created._remote_id = res.id; created._synced = true; }
-          }
-        }catch(e){ console.warn('Animal supabase insert failed', e); }
-      })();
-
-      return { ok:true };
+        const API_BASE_URL = 'https://pig-3k5m.onrender.com/api/v1';
+        const response = await fetch(`${API_BASE_URL}/animals`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tagNo: pig.tagNo,
+            name: pig.name || pig.tagNo,
+            type: type,
+            breed: pig.breed || null,
+            dob: pig.dob || null,
+            weight: pig.weight ? Number(pig.weight) : null,
+            litterNo: pig.litterNo || null,
+            stage: pig.stage || null,
+            status: 'active',
+            entryDate: pig.entryDate || null,
+            obtainedMethod: pig.obtainedMethod || null,
+            source: pig.source || null,
+            motherTag: pig.motherTag || null,
+            fatherTag: pig.fatherTag || null,
+            group: pig.group || null,
+            imageUrl: pig.imageUrl || null,
+            notes: pig.notes || null
+          })
+        });
+        
+        if(!response.ok){
+          const error = await response.json();
+          return { ok: false, error: error.message || 'Failed to add pig' };
+        }
+        
+        const newAnimal = await response.json();
+        
+        // Add to local cache
+        if(type === 'sow'){
+          this.sows.push(newAnimal);
+        } else if(type === 'boar'){
+          this.boars.push(newAnimal);
+        } else {
+          if(!this.piglets) this.piglets = [];
+          this.piglets.push(newAnimal);
+        }
+        
+        return { ok: true, data: newAnimal };
+      }catch(error){
+        console.error('Error adding pig:', error);
+        return { ok: false, error: 'Network error: ' + error.message };
+      }
     }
   };
 

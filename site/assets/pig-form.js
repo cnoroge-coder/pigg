@@ -117,15 +117,18 @@
         }
 
         // proceed to add pig even if upload failed or there was no photo
-        const res = AnimalsModule.addPig(data);
+        const res = await AnimalsModule.addPig(data);
         if(!res.ok){ setMessage(res.error || 'Failed to add pig','error'); return; }
 
         setMessage('Pig saved successfully','success');
         form.reset();
         refreshParents(); // new parents available
+        
+        // Reload the page after 1 second to show the new pig
+        setTimeout(() => window.location.href = 'pigs.html', 1000);
       }catch(e){
         console.warn('Error saving pig', e);
-        setMessage('Failed to save pig','error');
+        setMessage('Failed to save pig: ' + e.message,'error');
       }finally{
         if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
       }
