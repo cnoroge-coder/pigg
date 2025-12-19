@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Pig Farm — Piglet Details</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+  <header class="header">
+    <div class="container nav">
+      <button class="back-btn" aria-label="Back" id="backBtn">←</button>
+      <div class="brand"><span class="dot"></span> Pig Farm</div>
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+      <nav class="nav-links">
+        <a href="./">Dashboard</a>
+        <a href="sows.html">Sows</a>
+        <a href="boars.html">Boars</a>
+        <a href="litters.html">Litters</a>
+        <a href="piglets.html">Piglets</a>
+        <a href="feed.html">Feed</a>
+        <a href="events.html">Events</a>
+        <a href="health.html">Health</a>
+        <a href="reports.html">Reports</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding:18px 0 60px">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+      <h2>Piglet Details</h2>
+      <div style="display:flex;gap:8px">
+        <button id="editBtn" class="btn">Edit</button>
+        <button id="addWeightBtn" class="btn">+ Weight</button>
+        <button id="addFeedBtn" class="btn">+ Feed</button>
+        <button id="addEventBtn" class="btn">+ Event</button>
+      </div>
+    </div>
+
+    <div id="pigletInfo"></div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:8px;margin:20px 0 12px">
+      <button id="tabDetails" class="btn active">Details</button>
+      <button id="tabWeight" class="btn">Weight History</button>
+      <button id="tabFeed" class="btn">Feed Records</button>
+      <button id="tabEvents" class="btn">Events</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="detailsPane"></div>
+    <div id="weightPane" style="display:none"></div>
+    <div id="feedPane" style="display:none"></div>
+    <div id="eventsPane" style="display:none"></div>
+  </main>
+
+  <!-- Modal for adding weight -->
+  <div id="weightModal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Add Weight Record</h3>
+      <form id="weightForm">
+        <label>Weight (kg)</label>
+        <input type="number" step="0.1" id="weightInput" required />
+        <label>Date</label>
+        <input type="date" id="weightDate" required />
+        <label>Notes</label>
+        <textarea id="weightNotes" rows="3"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button type="submit" class="btn">Save</button>
+          <button type="button" class="btn" id="cancelWeight">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal for adding feed -->
+  <div id="feedModal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Add Feed Record</h3>
+      <form id="feedForm">
+        <label>Feed Type</label>
+        <input type="text" id="feedType" required />
+        <label>Quantity (kg)</label>
+        <input type="number" step="0.1" id="feedQuantity" required />
+        <label>Cost</label>
+        <input type="number" step="0.01" id="feedCost" />
+        <label>Date</label>
+        <input type="date" id="feedDate" required />
+        <label>Notes</label>
+        <textarea id="feedNotes" rows="3"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button type="submit" class="btn">Save</button>
+          <button type="button" class="btn" id="cancelFeed">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container small">© <span id="year"></span> Pig Farm Management</div>
+  </footer>
+
+  <script src="assets/supa-config.js"></script>
+  <script src="assets/supabase-client.js"></script>
+  <script src="assets/api-loader.js"></script>
+  <script src="assets/modules.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+    let currentPiglet = null;
+    let weightRecords = [];
+    let feedRecords = [];
+
+    function getUrlParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    async function loadPiglet() {
+      const id = getUrlParam('id');
+      if (!id) {
+        document.getElementById('pigletInfo').innerHTML = '<div class="card pad">Piglet ID not provided</div>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/piglets/${id}`);
+        if (!response.ok) {
+          document.getElementById('pigletInfo').innerHTML = '<div class="card pad">Piglet not found</div>';
+          return;
+        }
+
+        currentPiglet = await response.json();
+        weightRecords = currentPiglet.weightRecords || [];
+        feedRecords = currentPiglet.feedRecords || [];
+        
+        renderPigletInfo();
+        renderDetails();
+      } catch (error) {
+        console.error('Error loading piglet:', error);
+        document.getElementById('pigletInfo').innerHTML = '<div class="card pad">Error loading piglet</div>';
+      }
+    }
+
+    function calculateAge(farrowDate) {
+      if (!farrowDate) return null;
+      const birth = new Date(farrowDate);
+      const now = new Date();
+      const diffTime = Math.abs(now - birth);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+
+    function renderPigletInfo() {
+      const farrowDate = currentPiglet.litter?.farrowDate;
+      const age = calculateAge(farrowDate);
+      const ageDisplay = age !== null ? `${age} days (${Math.floor(age/7)} weeks)` : 'N/A';
+      
+      const sowName = currentPiglet.litter?.pregnancy?.sow?.name || currentPiglet.litter?.pregnancy?.sow?.tagNo || 'Unknown';
+      const boarName = currentPiglet.litter?.pregnancy?.boar?.name || currentPiglet.litter?.pregnancy?.boar?.tagNo || 'Unknown';
+      
+      const sexColor = currentPiglet.sex === 'male' ? '#3b82f6' : '#ec4899';
+      const sexIcon = currentPiglet.sex === 'male' ? '♂' : '♀';
+
+      const info = document.getElementById('pigletInfo');
+      info.innerHTML = `
+        <div class="card pad" style="margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:16px">
+            <div>
+              <img src="/pics/Pig.jpeg" alt="Piglet" style="width:100px;height:100px;object-fit:cover;border-radius:8px" />
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <h3 style="margin:0">${currentPiglet.tagNo}</h3>
+                <span style="font-size:24px;color:${sexColor}">${sexIcon}</span>
+              </div>
+              <div class="small">Sex</div>
+              <div style="color:${sexColor};font-weight:600;text-transform:capitalize">${currentPiglet.sex}</div>
+              <div style="height:8px"></div>
+              <div class="small">Age</div>
+              <div>${ageDisplay}</div>
+              <div class="small">Birth Date</div>
+              <div>${farrowDate ? new Date(farrowDate).toLocaleDateString() : 'N/A'}</div>
+            </div>
+            <div>
+              <div class="small">Current Weight</div>
+              <div style="font-size:24px;font-weight:700">${currentPiglet.currentWeight || '-'} <span style="font-size:14px">kg</span></div>
+              <div style="height:8px"></div>
+              <div class="small">Birth Weight</div>
+              <div>${currentPiglet.birthWeight || '-'} kg</div>
+              <div class="small">Status</div>
+              <div>${getStatusBadge(currentPiglet.status)}</div>
+              <div class="small">Health</div>
+              <div>${getHealthBadge(currentPiglet.healthStatus)}</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+            <div class="small">Mother (Sow)</div>
+            <div style="font-weight:600">${sowName}</div>
+            <div style="height:8px"></div>
+            <div class="small">Father (Boar)</div>
+            <div style="font-weight:600">${boarName}</div>
+            ${currentPiglet.notes ? `
+              <div style="height:8px"></div>
+              <div class="small">Notes</div>
+              <div>${currentPiglet.notes}</div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDetails() {
+      const pane = document.getElementById('detailsPane');
+      const weightGain = currentPiglet.currentWeight && currentPiglet.birthWeight 
+        ? (currentPiglet.currentWeight - currentPiglet.birthWeight).toFixed(2)
+        : '-';
+      
+      const avgDailyGain = currentPiglet.currentWeight && currentPiglet.birthWeight && currentPiglet.litter?.farrowDate
+        ? (() => {
+            const age = calculateAge(currentPiglet.litter.farrowDate);
+            if (age > 0) {
+              return ((currentPiglet.currentWeight - currentPiglet.birthWeight) / age * 1000).toFixed(0);
+            }
+            return '-';
+          })()
+        : '-';
+
+      pane.innerHTML = `
+        <div class="card pad">
+          <h3 style="margin-top:0">Growth Metrics</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+            <div>
+              <div class="small">Total Weight Gain</div>
+              <div style="font-size:20px;font-weight:600">${weightGain} kg</div>
+            </div>
+            <div>
+              <div class="small">Avg Daily Gain</div>
+              <div style="font-size:20px;font-weight:600">${avgDailyGain} g/day</div>
+            </div>
+            <div>
+              <div class="small">Total Feed Records</div>
+              <div style="font-size:20px;font-weight:600">${feedRecords.length}</div>
+            </div>
+            <div>
+              <div class="small">Weight Measurements</div>
+              <div style="font-size:20px;font-weight:600">${weightRecords.length}</div>
+            </div>
+          </div>
+          
+          ${currentPiglet.weaningDate ? `
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+              <div class="small">Weaning Date</div>
+              <div>${new Date(currentPiglet.weaningDate).toLocaleDateString()}</div>
+              ${currentPiglet.weaningWeight ? `
+                <div style="height:8px"></div>
+                <div class="small">Weaning Weight</div>
+                <div>${currentPiglet.weaningWeight} kg</div>
+              ` : ''}
+            </div>
+          ` : ''}
+          
+          ${currentPiglet.saleDate ? `
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+              <h4>Sale Information</h4>
+              <div class="small">Sale Date</div>
+              <div>${new Date(currentPiglet.saleDate).toLocaleDateString()}</div>
+              ${currentPiglet.salePrice ? `
+                <div style="height:8px"></div>
+                <div class="small">Sale Price</div>
+                <div style="font-size:20px;font-weight:600;color:#22c55e">$${currentPiglet.salePrice}</div>
+              ` : ''}
+              ${currentPiglet.buyer ? `
+                <div style="height:8px"></div>
+                <div class="small">Buyer</div>
+                <div>${currentPiglet.buyer}</div>
+              ` : ''}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderWeightHistory() {
+      const pane = document.getElementById('weightPane');
+      
+      if (weightRecords.length === 0) {
+        pane.innerHTML = '<div class="card pad">No weight records yet. Click "+ Weight" to add one.</div>';
+        return;
+      }
+
+      const sorted = [...weightRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      let html = '<div class="card pad"><h3 style="margin-top:0">Weight History</h3>';
+      sorted.forEach(record => {
+        html += `
+          <div style="padding:12px;border-bottom:1px solid #e5e7eb">
+            <div style="display:flex;justify-content:space-between">
+              <div style="font-size:20px;font-weight:700">${record.weight} kg</div>
+              <div class="small">${new Date(record.date).toLocaleDateString()}</div>
+            </div>
+            ${record.notes ? `<div class="small" style="margin-top:4px">${record.notes}</div>` : ''}
+          </div>
+        `;
+      });
+      html += '</div>';
+      pane.innerHTML = html;
+    }
+
+    function renderFeedHistory() {
+      const pane = document.getElementById('feedPane');
+      
+      if (feedRecords.length === 0) {
+        pane.innerHTML = '<div class="card pad">No feed records yet. Click "+ Feed" to add one.</div>';
+        return;
+      }
+
+      const sorted = [...feedRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      let html = '<div class="card pad"><h3 style="margin-top:0">Feed History</h3>';
+      sorted.forEach(record => {
+        html += `
+          <div style="padding:12px;border-bottom:1px solid #e5e7eb">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <div style="font-weight:600">${record.feedType}</div>
+                <div class="small">${record.quantity} ${record.unit || 'kg'}</div>
+                ${record.cost ? `<div class="small" style="color:#22c55e">$${record.cost}</div>` : ''}
+              </div>
+              <div class="small">${new Date(record.date).toLocaleDateString()}</div>
+            </div>
+            ${record.notes ? `<div class="small" style="margin-top:4px">${record.notes}</div>` : ''}
+          </div>
+        `;
+      });
+      html += '</div>';
+      pane.innerHTML = html;
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        'nursing': '<span class="badge" style="background:#93c5fd;color:#1e40af">Nursing</span>',
+        'weaned': '<span class="badge" style="background:#fde047;color:#854d0e">Weaned</span>',
+        'fattening': '<span class="badge" style="background:#a78bfa;color:#5b21b6">Fattening</span>',
+        'ready_for_sale': '<span class="badge" style="background:#86efac;color:#166534">Ready</span>',
+        'sold': '<span class="badge" style="background:#d1d5db;color:#374151">Sold</span>',
+        'deceased': '<span class="badge" style="background:#fca5a5;color:#991b1b">Deceased</span>',
+      };
+      return badges[status] || '<span class="badge">' + status + '</span>';
+    }
+
+    function getHealthBadge(health) {
+      const badges = {
+        'healthy': '<span class="badge" style="background:#86efac;color:#166534">Healthy</span>',
+        'sick': '<span class="badge" style="background:#fca5a5;color:#991b1b">Sick</span>',
+        'recovering': '<span class="badge" style="background:#fde047;color:#854d0e">Recovering</span>',
+        'deceased': '<span class="badge" style="background:#d1d5db;color:#374151">Deceased</span>',
+      };
+      return badges[health] || '<span class="badge">' + health + '</span>';
+    }
+
+    // Tab switching
+    function setupTabs() {
+      const tabs = {
+        'tabDetails': 'detailsPane',
+        'tabWeight': 'weightPane',
+        'tabFeed': 'feedPane',
+        'tabEvents': 'eventsPane'
+      };
+
+      Object.keys(tabs).forEach(tabId => {
+        document.getElementById(tabId).addEventListener('click', () => {
+          // Hide all panes
+          Object.values(tabs).forEach(paneId => {
+            document.getElementById(paneId).style.display = 'none';
+          });
+          // Remove active class from all tabs
+          Object.keys(tabs).forEach(id => {
+            document.getElementById(id).classList.remove('active');
+          });
+          // Show selected pane and activate tab
+          document.getElementById(tabs[tabId]).style.display = 'block';
+          document.getElementById(tabId).classList.add('active');
+          
+          // Render content based on tab
+          if (tabId === 'tabWeight') renderWeightHistory();
+          if (tabId === 'tabFeed') renderFeedHistory();
+        });
+      });
+    }
+
+    // Weight modal
+    document.getElementById('addWeightBtn').addEventListener('click', () => {
+      document.getElementById('weightModal').style.display = 'flex';
+      document.getElementById('weightDate').valueAsDate = new Date();
+    });
+
+    document.getElementById('cancelWeight').addEventListener('click', () => {
+      document.getElementById('weightModal').style.display = 'none';
+      document.getElementById('weightForm').reset();
+    });
+
+    document.getElementById('weightForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        pigletId: currentPiglet.id,
+        weight: parseFloat(document.getElementById('weightInput').value),
+        date: document.getElementById('weightDate').value,
+        notes: document.getElementById('weightNotes').value || null
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/piglets/weight-records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          document.getElementById('weightModal').style.display = 'none';
+          document.getElementById('weightForm').reset();
+          await loadPiglet(); // Reload to get updated data
+          alert('Weight record added successfully!');
+        } else {
+          alert('Failed to add weight record');
+        }
+      } catch (error) {
+        console.error('Error adding weight:', error);
+        alert('Error adding weight record');
+      }
+    });
+
+    // Feed modal
+    document.getElementById('addFeedBtn').addEventListener('click', () => {
+      document.getElementById('feedModal').style.display = 'flex';
+      document.getElementById('feedDate').valueAsDate = new Date();
+    });
+
+    document.getElementById('cancelFeed').addEventListener('click', () => {
+      document.getElementById('feedModal').style.display = 'none';
+      document.getElementById('feedForm').reset();
+    });
+
+    document.getElementById('feedForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        pigletId: currentPiglet.id,
+        feedType: document.getElementById('feedType').value,
+        quantity: parseFloat(document.getElementById('feedQuantity').value),
+        cost: document.getElementById('feedCost').value ? parseFloat(document.getElementById('feedCost').value) : null,
+        date: document.getElementById('feedDate').value,
+        notes: document.getElementById('feedNotes').value || null
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/piglets/feed-records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          document.getElementById('feedModal').style.display = 'none';
+          document.getElementById('feedForm').reset();
+          await loadPiglet(); // Reload to get updated data
+          alert('Feed record added successfully!');
+        } else {
+          alert('Failed to add feed record');
+        }
+      } catch (error) {
+        console.error('Error adding feed:', error);
+        alert('Error adding feed record');
+      }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPiglet();
+      setupTabs();
+      wireActiveNav();
+      document.getElementById('year').textContent = new Date().getFullYear();
+    });
+
+    // Style for modals
+    const style = document.createElement('style');
+    style.textContent = `
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+      }
+      .modal-content input, .modal-content textarea {
+        width: 100%;
+        padding: 8px;
+        margin: 8px 0;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+      }
+      .modal-content label {
+        display: block;
+        font-weight: 600;
+        margin-top: 12px;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
