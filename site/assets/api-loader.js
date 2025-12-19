@@ -44,7 +44,7 @@
     
     window.Modules.AnimalsModule.sows = sows;
     window.Modules.AnimalsModule.boars = boars;
-    window.Modules.AnimalsModule.piglets = piglets.length;
+    window.Modules.AnimalsModule.piglets = piglets; // Keep as array
     window.Modules.AnimalsModule.all = animals;
     
     console.log('✅ Animals loaded and ready!');
