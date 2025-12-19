@@ -47,15 +47,6 @@
     </section>
 
     <section class="section">
-      <div class="section-title">
-        <h2>All Pigs</h2>
-        <a class="btn" href="add-pig.html">＋ Add Pig</a>
-      </div>
-      <div id="totals" class="grid tiles" style="margin-bottom:18px"></div>
-      <div id="pigList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
-    </section>
-
-    <section class="section">
       <div class="section-title"><h2>Alerts</h2></div>
       <div id="alerts" class="list"></div>
     </section>
@@ -86,82 +77,43 @@
   window.addEventListener('animalsLoaded', (e) => {
     const { AnimalsModule } = window.Modules;
     
-    // Populate original Key Metrics tiles
+    // Separate piglets by gender
+    const piglets = Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets : [];
+    const malePiglets = piglets.filter(p => p.gender && p.gender.toLowerCase().startsWith('m'));
+    const femalePiglets = piglets.filter(p => p.gender && p.gender.toLowerCase().startsWith('f'));
+    const unknownPiglets = piglets.filter(p => !p.gender || (!p.gender.toLowerCase().startsWith('m') && !p.gender.toLowerCase().startsWith('f')));
+    
+    // Calculate litters (placeholder - will need actual litter data)
+    const totalLitters = 0; // TODO: Get from LittersModule when implemented
+    const nursingLitters = 0; // TODO: Get from LittersModule when implemented
+    
+    const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + piglets.length;
+    
+    // Populate Key Metrics tiles
     const tiles = document.getElementById('tiles');
-    const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + (Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0);
     tiles.innerHTML = '';
-    [
-      {label:'Total Animals', value:totalPigs},
-      {label:'Sows', value:AnimalsModule.sows.length},
-      {label:'Boars', value:AnimalsModule.boars.length},
-      {label:'Piglets', value:Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0}
-    ].forEach(m=>{
-      const c=document.createElement('div'); c.className='card pad tile';
+    
+    const metrics = [
+      {label:'Total Animals', value:totalPigs, link: null},
+      {label:'Sows', value:AnimalsModule.sows.length, link: 'sows.html'},
+      {label:'Boars', value:AnimalsModule.boars.length, link: 'boars.html'},
+      {label:'Total Piglets', value:piglets.length, link: null},
+      {label:'Male Piglets', value:malePiglets.length + unknownPiglets.length, link: null},
+      {label:'Female Piglets', value:femalePiglets.length, link: null},
+      {label:'Total Litters', value:totalLitters, link: 'litters.html'},
+      {label:'Nursing Litters', value:nursingLitters, link: 'litters.html'}
+    ];
+    
+    metrics.forEach(m => {
+      const c = document.createElement(m.link ? 'a' : 'div');
+      c.className = 'card pad tile';
+      if(m.link) {
+        c.href = m.link;
+        c.style.cursor = 'pointer';
+      }
       c.innerHTML = `<div class="label">${m.label}</div><div class="value">${m.value}</div>`;
       tiles.append(c);
     });
-    
-    // Populate pigs section totals
-    const totals = document.getElementById('totals');
-    const totalPiglets = Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0;
-    const sowCount = AnimalsModule.sows.length;
-    const boarCount = AnimalsModule.boars.length;
-    totals.innerHTML = '';
-    [
-      {label:'Total pigs', value:totalPigs},
-      {label:'Total piglets', value:totalPiglets},
-      {label:'Total sows', value:sowCount},
-      {label:'Total boars', value:boarCount}
-    ].forEach(m=>{
-      const c=document.createElement('div'); c.className='card pad tile';
-      c.innerHTML = `<div class="label">${m.label}</div><div class="value">${m.value}</div>`;
-      totals.append(c);
-    });
-
-    // Quick access cards
-    const root = document.getElementById('pigList'); root.innerHTML='';
-    const sowsCard = document.createElement('a');
-    sowsCard.href = 'sows.html'; sowsCard.className = 'card pad';
-    sowsCard.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="font-weight:700">View Sows</div>
-        <div class="small">See all female breeders on the farm</div>
-        <div style="height:8px"></div>
-        <div class="badge ok">Total: ${sowCount}</div>
-      </div>
-    `;
-
-    const boarsCard = document.createElement('a');
-    boarsCard.href = 'boars.html'; boarsCard.className = 'card pad';
-    boarsCard.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="font-weight:700">View Boars</div>
-        <div class="small">See all male breeders on the farm</div>
-        <div style="height:8px"></div>
-        <div class="badge">Total: ${boarCount}</div>
-      </div>
-    `;
-
-    const pigletsPreview = document.createElement('div'); pigletsPreview.className='card pad';
-    pigletsPreview.innerHTML = `
-      <div style="font-weight:700">Piglets</div>
-      <div class="small">Growing young stock</div>
-      <div style="height:8px"></div>
-      <div class="small">Count: ${totalPiglets}</div>
-    `;
-
-    const eventsCount = (window.Modules.EventsModule && window.Modules.EventsModule.events) ? window.Modules.EventsModule.events.length : 0;
-    const eventsCard = document.createElement('a'); eventsCard.href = 'events.html'; eventsCard.className='card pad';
-    eventsCard.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="font-weight:700">Events</div>
-        <div class="small">Upcoming & recent events</div>
-        <div style="height:8px"></div>
-        <div class="badge">Total: ${eventsCount}</div>
-      </div>
-    `;
-
-    root.append(sowsCard, boarsCard, pigletsPreview, eventsCard);
   });
   
   document.getElementById('year').textContent = new Date().getFullYear();
