@@ -58,8 +58,8 @@
     console.log('Dropdowns populated!');
   }
 
-  // Wait for animals loaded event
-  document.addEventListener('animalsLoaded', () => {
+  // Wait for animals loaded event (listen on window, not document)
+  window.addEventListener('animalsLoaded', () => {
     console.log('animalsLoaded event received');
     populateDropdowns();
   });
@@ -72,7 +72,7 @@
     } else {
       console.log('Waiting for animals to load...');
     }
-  }, 500);
+  }, 1000); // Increased timeout to give API more time
 
   function collect(){
     return {
