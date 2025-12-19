@@ -11,23 +11,25 @@
     msg.className = 'form-msg ' + (type||'');
   }
 
-  // Wait for animals to load, then populate sow and boar dropdowns
+  // Wait for animals to load, then populate mother and father dropdowns
   function populateDropdowns() {
-    const sowSelect = qs('sowTag');
-    const boarSelect = qs('boarTag');
+    const motherSelect = qs('motherName');
+    const fatherSelect = qs('fatherName');
     
-    if(!sowSelect || !boarSelect) return;
+    if(!motherSelect || !fatherSelect) return;
     
-    // Populate sows
-    sowSelect.innerHTML = '<option value="">-- Select Sow --</option>';
+    // Populate mothers (sows)
+    motherSelect.innerHTML = '<option value="">-- Select Mother --</option>';
     AnimalsModule.sows.forEach(s=> {
-      sowSelect.append(new Option(`${s.tagNo} - ${s.name || 'Unnamed'}`, s.tagNo));
+      const displayName = s.name || s.tagNo || 'Unnamed';
+      motherSelect.append(new Option(displayName, displayName));
     });
     
-    // Populate boars
-    boarSelect.innerHTML = '<option value="">-- Optional --</option>';
+    // Populate fathers (boars)
+    fatherSelect.innerHTML = '<option value="">-- Optional --</option>';
     AnimalsModule.boars.forEach(b=> {
-      boarSelect.append(new Option(`${b.tagNo} - ${b.name || 'Unnamed'}`, b.tagNo));
+      const displayName = b.name || b.tagNo || 'Unnamed';
+      fatherSelect.append(new Option(displayName, displayName));
     });
   }
 
@@ -40,8 +42,8 @@
 
   function collect(){
     return {
-      sowTag: qs('sowTag').value.trim(),
-      boarTag: qs('boarTag').value.trim(),
+      motherName: qs('motherName').value.trim(),
+      fatherName: qs('fatherName').value.trim() || null,
       farrowDate: qs('farrowDate').value,
       numberBorn: qs('numberBorn').value.trim(),
       alive: qs('alive').value.trim(),
@@ -57,7 +59,7 @@
     const data = collect();
     
     // Basic validation
-    if(!data.sowTag){ setMessage('Sow tag number is required','error'); return; }
+    if(!data.motherName){ setMessage('Mother name is required','error'); return; }
     if(!data.farrowDate){ setMessage('Farrow date is required','error'); return; }
     if(!data.numberBorn){ setMessage('Number born is required','error'); return; }
     if(!data.alive){ setMessage('Number alive is required','error'); return; }
@@ -71,14 +73,23 @@
       return;
     }
 
+    // Find the sow and boar by name to get their tags
+    const mother = AnimalsModule.sows.find(s => (s.name || s.tagNo) === data.motherName);
+    if(!mother) {
+      setMessage('Mother not found','error');
+      return;
+    }
+    
+    const father = data.fatherName ? AnimalsModule.boars.find(b => (b.name || b.tagNo) === data.fatherName) : null;
+
     const saveBtn = qs('saveBtn');
     if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
     
     try{
       // First, create or find pregnancy record
       const pregnancyData = {
-        sowTag: data.sowTag,
-        boarTag: data.boarTag || null,
+        sowTag: mother.tagNo,
+        boarTag: father ? father.tagNo : null,
         breedingDate: new Date(new Date(data.farrowDate).getTime() - (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0], // 114 days before farrow
         expectedDate: data.farrowDate,
         status: 'Farrowed'
