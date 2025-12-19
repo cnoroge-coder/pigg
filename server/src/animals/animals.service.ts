@@ -8,12 +8,13 @@ export class AnimalsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createAnimalDto: CreateAnimalDto) {
-    // This will use your Prisma schema once it's set up
-    // For now, this is a placeholder
-    return {
-      message: 'Animal created',
-      data: createAnimalDto,
-    };
+    const animal = await this.prisma.animal.create({
+      data: {
+        ...createAnimalDto,
+        dob: createAnimalDto.dob ? new Date(createAnimalDto.dob) : null,
+      },
+    });
+    return animal;
   }
 
   async findAll() {
@@ -51,25 +52,30 @@ export class AnimalsService {
   }
 
   async findOne(id: string) {
-    // TODO: Implement with Prisma
-    return {
-      message: `Animal ${id}`,
-      data: null,
-    };
+    const animal = await this.prisma.animal.findUnique({
+      where: { id },
+    });
+    if (!animal) {
+      throw new NotFoundException(`Animal with ID ${id} not found`);
+    }
+    return animal;
   }
 
   async update(id: string, updateAnimalDto: UpdateAnimalDto) {
-    // TODO: Implement with Prisma
-    return {
-      message: `Animal ${id} updated`,
-      data: updateAnimalDto,
-    };
+    const animal = await this.prisma.animal.update({
+      where: { id },
+      data: {
+        ...updateAnimalDto,
+        dob: updateAnimalDto.dob ? new Date(updateAnimalDto.dob) : undefined,
+      },
+    });
+    return animal;
   }
 
   async remove(id: string) {
-    // TODO: Implement with Prisma
-    return {
-      message: `Animal ${id} deleted`,
-    };
+    await this.prisma.animal.delete({
+      where: { id },
+    });
+    return { message: `Animal ${id} deleted successfully` };
   }
 }
