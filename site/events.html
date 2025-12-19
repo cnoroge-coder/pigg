@@ -29,14 +29,61 @@
 
   <main class="container" style="padding:22px 0 40px">
     <div class="section-title" style="align-items:center">
-      <h2 id="eventsTitle">Upcoming Events</h2>
+      <h2 id="eventsTitle">All Events</h2>
       <div style="display:flex;gap:8px;align-items:center">
-        <button id="addEvent" class="btn">＋ Add Event</button>
+        <button id="filterUpcoming" class="btn active">Upcoming</button>
+        <button id="filterPast" class="btn">Past</button>
+        <button id="filterAll" class="btn">All</button>
+        <button id="addEventBtn" class="btn" style="margin-left:12px;background:#22c55e;border-color:#16a34a;color:#fff">+ Add Event</button>
       </div>
     </div>
-    <div id="eventsControls" style="margin-top:8px"></div>
+    
+    <div id="eventsSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0"></div>
+    
     <div id="eventsGrid" class="list"></div>
   </main>
+
+  <!-- Add Event Modal -->
+  <div id="addEventModal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Add Event</h3>
+      <form id="addEventForm">
+        <label>Event Type *</label>
+        <select id="eventType" required>
+          <option value="">Select type...</option>
+          <option value="Vaccination">Vaccination</option>
+          <option value="Health Check">Health Check</option>
+          <option value="Treatment">Treatment</option>
+          <option value="Weaning">Weaning</option>
+          <option value="Weight Check">Weight Check</option>
+          <option value="Breeding">Breeding</option>
+          <option value="Other">Other</option>
+        </select>
+        
+        <label>Apply To *</label>
+        <select id="eventTarget" required>
+          <option value="piglet">Individual Piglet</option>
+          <option value="litter">Entire Litter</option>
+          <option value="sow">Sow</option>
+          <option value="boar">Boar</option>
+          <option value="multiple">Multiple Piglets</option>
+        </select>
+        
+        <div id="targetSelectionArea"></div>
+        
+        <label>Date *</label>
+        <input type="date" id="eventDate" required />
+        
+        <label>Notes</label>
+        <textarea id="eventNotes" rows="3"></textarea>
+        
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button type="submit" class="btn">Save Event</button>
+          <button type="button" class="btn" id="cancelEventBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <footer class="footer">
     <div class="container small">© <span id="year"></span> Pig Farm Management</div>
@@ -44,85 +91,325 @@
 
   <script src="assets/supa-config.js"></script>
   <script src="assets/supabase-client.js"></script>
+  <script src="assets/api-loader.js"></script>
   <script src="assets/modules.js"></script>
   <script src="assets/app.js"></script>
   <script>
-  function param(name){ const p = new URLSearchParams(location.search); return p.get(name); }
-  function renderEvents(){
-    const root = document.getElementById('eventsGrid'); root.innerHTML='';
-    const evs = window.Modules.EventsModule.events || [];
-    const today = new Date().setHours(0,0,0,0);
-    const tag = param('tag');
-    const showAll = param('all');
-    if(showAll){
-      // show all events (past + upcoming) for tag or all, newest first
-      const list = evs.filter(e=> !tag || e.tag===tag).sort((a,b)=> new Date(b.date)-new Date(a.date));
-      if(list.length===0){ root.innerHTML='<div class="small">No events found</div>'; return; }
-      list.forEach(e=>{
-        const it = document.createElement('div'); it.className='card pad';
-        it.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-weight:700">${e.type}</div>
-            <div class="small">${e.date}</div>
-          </div>
-          <div style="height:8px"></div>
-          <div class="small">Tag:</div><div>${e.tag||'-'}</div>
-          <div class="small">Notes:</div><div>${e.notes||''}</div>
-        `;
-        root.append(it);
-      });
-      return;
+    const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+    let allEvents = [];
+    let allPiglets = [];
+    let allLitters = [];
+    let currentFilter = 'upcoming';
+
+    async function loadEvents() {
+      try {
+        // Load events from API when endpoint is ready
+        // For now, use empty array - events will be in database
+        allEvents = [];
+        renderEvents();
+      } catch (error) {
+        console.error('Error loading events:', error);
+      }
     }
-    const upcoming = evs.filter(e=> new Date(e.date).setHours(0,0,0,0) >= today && (!tag || e.tag===tag)).sort((a,b)=> new Date(a.date)-new Date(b.date));
-    if(upcoming.length===0){ root.innerHTML='<div class="small">No upcoming events</div>'; return; }
-    upcoming.forEach(e=>{
-      const it = document.createElement('div'); it.className='card pad';
-      it.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">${e.type}</div>
-          <div class="small">${e.date}</div>
+
+    async function loadPiglets() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/piglets`);
+        if (response.ok) {
+          allPiglets = await response.json();
+        }
+      } catch (error) {
+        console.error('Error loading piglets:', error);
+      }
+    }
+
+    async function loadLitters() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/litters`);
+        if (response.ok) {
+          allLitters = await response.json();
+        }
+      } catch (error) {
+        console.error('Error loading litters:', error);
+      }
+    }
+
+    function renderEvents() {
+      const grid = document.getElementById('eventsGrid');
+      const summary = document.getElementById('eventsSummary');
+      
+      grid.innerHTML = '';
+      summary.innerHTML = '';
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let filtered = allEvents;
+      if (currentFilter === 'upcoming') {
+        filtered = allEvents.filter(e => new Date(e.date) >= today);
+      } else if (currentFilter === 'past') {
+        filtered = allEvents.filter(e => new Date(e.date) < today);
+      }
+
+      // Sort by date
+      filtered.sort((a, b) => {
+        if (currentFilter === 'past') {
+          return new Date(b.date) - new Date(a.date); // Newest first for past
+        }
+        return new Date(a.date) - new Date(b.date); // Soonest first for upcoming
+      });
+
+      // Summary cards
+      const upcoming = allEvents.filter(e => new Date(e.date) >= today).length;
+      const past = allEvents.filter(e => new Date(e.date) < today).length;
+      
+      summary.innerHTML = `
+        <div class="card pad">
+          <div class="small">Total Events</div>
+          <div style="font-size:28px;font-weight:700">${allEvents.length}</div>
         </div>
-        <div style="height:8px"></div>
-        <div class="small">Tag:</div><div>${e.tag||'-'}</div>
-        <div class="small">Notes:</div><div>${e.notes||''}</div>
+        <div class="card pad">
+          <div class="small">Upcoming</div>
+          <div style="font-size:28px;font-weight:700;color:#22c55e">${upcoming}</div>
+        </div>
+        <div class="card pad">
+          <div class="small">Past</div>
+          <div style="font-size:28px;font-weight:700;color:#6b7280">${past}</div>
+        </div>
       `;
-      root.append(it);
-    });
-  }
 
-  function showAddForm(prefillTag){
-    const cont = document.getElementById('eventsControls'); cont.innerHTML='';
-    const wrap = document.createElement('div'); wrap.className='card pad';
-    wrap.innerHTML = `
-      <div style="display:grid;gap:8px">
-        <input id="ev_type" class="input" placeholder="Event type (e.g. Vaccination)" />
-        <input id="ev_date" type="date" class="input" />
-        <input id="ev_tag" class="input" placeholder="Tag (optional)" />
-        <textarea id="ev_notes" class="input" rows="3" placeholder="Notes"></textarea>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button id="ev_cancel" class="btn">Cancel</button>
-          <button id="ev_save" class="btn primary">Save</button>
-        </div>
-      </div>
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="card pad small">No events found. Click "+ Add Event" to create one.</div>';
+        return;
+      }
+
+      filtered.forEach(event => {
+        const card = document.createElement('div');
+        card.className = 'card pad';
+        
+        const isPast = new Date(event.date) < today;
+        const dateColor = isPast ? '#6b7280' : '#22c55e';
+        
+        // Determine targets display
+        let targetsDisplay = '';
+        if (event.pigletIds && event.pigletIds.length > 0) {
+          targetsDisplay = `${event.pigletIds.length} piglet(s)`;
+        } else if (event.litterId) {
+          targetsDisplay = 'Entire litter';
+        } else if (event.sowId || event.boarId) {
+          targetsDisplay = event.sowId ? 'Sow' : 'Boar';
+        }
+
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:start">
+            <div>
+              <div style="font-weight:700;font-size:18px">${event.type}</div>
+              <div class="small" style="color:#6b7280;margin-top:4px">${targetsDisplay}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="color:${dateColor};font-weight:600">${new Date(event.date).toLocaleDateString()}</div>
+              <div class="small" style="color:#6b7280">${isPast ? 'Completed' : 'Scheduled'}</div>
+            </div>
+          </div>
+          ${event.notes ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;color:#6b7280">${event.notes}</div>` : ''}
+          <button class="btn" style="margin-top:12px;width:100%;background:#ef4444;border-color:#dc2626;color:#fff" onclick="deleteEvent('${event.id}')">Delete</button>
+        `;
+        
+        grid.appendChild(card);
+      });
+    }
+
+    async function deleteEvent(eventId) {
+      if (!confirm('Are you sure you want to delete this event?')) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Event deleted successfully!');
+          await loadEvents();
+        } else {
+          alert('Failed to delete event');
+        }
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        alert('Error deleting event');
+      }
+    }
+
+    // Modal handling
+    document.getElementById('addEventBtn').addEventListener('click', () => {
+      document.getElementById('addEventModal').style.display = 'flex';
+      document.getElementById('eventDate').valueAsDate = new Date();
+    });
+
+    document.getElementById('cancelEventBtn').addEventListener('click', () => {
+      document.getElementById('addEventModal').style.display = 'none';
+      document.getElementById('addEventForm').reset();
+      document.getElementById('targetSelectionArea').innerHTML = '';
+    });
+
+    // Event target selection
+    document.getElementById('eventTarget').addEventListener('change', async (e) => {
+      const area = document.getElementById('targetSelectionArea');
+      const target = e.target.value;
+      
+      area.innerHTML = '';
+      
+      if (target === 'piglet') {
+        await loadPiglets();
+        area.innerHTML = `
+          <label>Select Piglet *</label>
+          <select id="selectedPiglet" required>
+            <option value="">Choose piglet...</option>
+            ${allPiglets.map(p => `<option value="${p.id}">${p.tagNo}</option>`).join('')}
+          </select>
+        `;
+      } else if (target === 'litter') {
+        await loadLitters();
+        area.innerHTML = `
+          <label>Select Litter *</label>
+          <select id="selectedLitter" required>
+            <option value="">Choose litter...</option>
+            ${allLitters.map(l => {
+              const sowName = l.pregnancy?.sow?.name || l.pregnancy?.sow?.tagNo || 'Unknown';
+              const date = l.farrowDate ? new Date(l.farrowDate).toLocaleDateString() : 'N/A';
+              return `<option value="${l.id}">${sowName} - ${date}</option>`;
+            }).join('')}
+          </select>
+        `;
+      } else if (target === 'multiple') {
+        await loadPiglets();
+        area.innerHTML = `
+          <label>Select Piglets * (Hold Ctrl/Cmd to select multiple)</label>
+          <select id="selectedPiglets" multiple required style="height:200px">
+            ${allPiglets.map(p => `<option value="${p.id}">${p.tagNo}</option>`).join('')}
+          </select>
+        `;
+      } else if (target === 'sow' || target === 'boar') {
+        area.innerHTML = `
+          <label>Tag Number *</label>
+          <input type="text" id="selectedTag" placeholder="Enter ${target} tag number" required />
+        `;
+      }
+    });
+
+    // Form submission
+    document.getElementById('addEventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const eventData = {
+        type: document.getElementById('eventType').value,
+        date: document.getElementById('eventDate').value,
+        notes: document.getElementById('eventNotes').value || null
+      };
+
+      const target = document.getElementById('eventTarget').value;
+      
+      if (target === 'piglet') {
+        eventData.pigletIds = [document.getElementById('selectedPiglet').value];
+      } else if (target === 'litter') {
+        eventData.litterId = document.getElementById('selectedLitter').value;
+      } else if (target === 'multiple') {
+        const select = document.getElementById('selectedPiglets');
+        eventData.pigletIds = Array.from(select.selectedOptions).map(opt => opt.value);
+      } else if (target === 'sow') {
+        eventData.sowId = document.getElementById('selectedTag').value;
+      } else if (target === 'boar') {
+        eventData.boarId = document.getElementById('selectedTag').value;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventData)
+        });
+
+        if (response.ok) {
+          alert('Event added successfully!');
+          document.getElementById('addEventModal').style.display = 'none';
+          document.getElementById('addEventForm').reset();
+          document.getElementById('targetSelectionArea').innerHTML = '';
+          await loadEvents();
+        } else {
+          alert('Failed to add event');
+        }
+      } catch (error) {
+        console.error('Error adding event:', error);
+        alert('Error adding event');
+      }
+    });
+
+    // Filter buttons
+    document.getElementById('filterUpcoming').addEventListener('click', () => {
+      currentFilter = 'upcoming';
+      document.querySelectorAll('#filterUpcoming, #filterPast, #filterAll').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('filterUpcoming').classList.add('active');
+      renderEvents();
+    });
+
+    document.getElementById('filterPast').addEventListener('click', () => {
+      currentFilter = 'past';
+      document.querySelectorAll('#filterUpcoming, #filterPast, #filterAll').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('filterPast').classList.add('active');
+      renderEvents();
+    });
+
+    document.getElementById('filterAll').addEventListener('click', () => {
+      currentFilter = 'all';
+      document.querySelectorAll('#filterUpcoming, #filterPast, #filterAll').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('filterAll').classList.add('active');
+      renderEvents();
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadEvents();
+      wireActiveNav();
+      document.getElementById('year').textContent = new Date().getFullYear();
+    });
+
+    // Modal styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      .modal-content input, .modal-content textarea, .modal-content select {
+        width: 100%;
+        padding: 8px;
+        margin: 8px 0;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+      }
+      .modal-content label {
+        display: block;
+        font-weight: 600;
+        margin-top: 12px;
+      }
     `;
-    cont.append(wrap);
-    if(prefillTag) document.getElementById('ev_tag').value = prefillTag;
-    document.getElementById('ev_cancel').addEventListener('click', ()=>{ cont.innerHTML=''; });
-    document.getElementById('ev_save').addEventListener('click', ()=>{
-      const ev = { type: document.getElementById('ev_type').value.trim() || 'Event', date: document.getElementById('ev_date').value || new Date().toISOString().slice(0,10), tag: document.getElementById('ev_tag').value.trim() || '', notes: document.getElementById('ev_notes').value.trim() };
-      window.Modules.EventsModule.addEvent(ev);
-      cont.innerHTML=''; renderEvents();
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', ()=>{
-    const tag = param('tag');
-    const title = document.getElementById('eventsTitle');
-    const showAll = param('all');
-    if(tag){ title.textContent = showAll? 'Events (all) for '+tag : 'Upcoming Events for '+tag; }
-    renderEvents(); document.getElementById('year').textContent = new Date().getFullYear(); wireActiveNav && wireActiveNav();
-    const btn = document.getElementById('addEvent'); btn && btn.addEventListener('click', ()=>{ const tag = param('tag'); showAddForm(tag||''); });
-  });
+    document.head.appendChild(style);
   </script>
 </body>
 </html>

@@ -440,14 +440,9 @@
         });
       }
       
-      html += '<button class="btn" style="width:100%;margin-top:12px" onclick="showPreviousEvents()">Previous Events</button>';
+      html += '<button class="btn" style="width:100%;margin-top:12px" onclick="window.location.href=\'events.html\'">View All Events</button>';
       html += '</div>';
       pane.innerHTML = html;
-    }
-
-    function showPreviousEvents() {
-      // Will implement modal for previous events
-      alert('Previous events feature coming soon!');
     }
 
     function renderWeightHistory() {

@@ -29,7 +29,10 @@
   <main class="container" style="padding:22px 0 40px">
       <div class="section-title">
         <h2>Sows</h2>
-        <a class="btn" href="add-pig.html">Add Pig</a>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="addSowEventBtn" style="background:#8b5cf6;border-color:#7c3aed;color:#fff">Add Event to Sows</button>
+          <a class="btn" href="add-pig.html">Add Pig</a>
+        </div>
       </div>
     <div class="grid" style="grid-template-columns:repeat(1,minmax(0,1fr))">
       <div class="small" style="color:#a1a1aa">Showing dummy data</div>
@@ -48,12 +51,16 @@
   <script src="assets/api-loader.js"></script>
   <script src="assets/app.js"></script>
   <script>
+  let selectedSows = new Set();
+  let sowEventSelectionMode = false;
+
   function renderSows(){
     const root = document.getElementById('sowGrid');
     root.innerHTML='';
     const mod = window.Modules.AnimalsModule;
     mod.sows.forEach(s=>{
-      const card = document.createElement('a'); card.className='card pad sow-card'; card.href = 'pig.html?tag='+encodeURIComponent(s.tagNo);
+      const card = document.createElement('a'); 
+      card.className='card pad sow-card'; 
       
       // Check for active pregnancy
       const pregAll = window.Modules.AnimalsModule.getBreedingFor(s.tagNo) || [];
@@ -95,6 +102,23 @@
         pregnancyInfo = `<div class="small" style="color:#6b7280">Not pregnant</div>`;
       }
       
+      if (sowEventSelectionMode) {
+        card.href = 'javascript:void(0)';
+        card.style.position = 'relative';
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (selectedSows.has(s.tagNo)) {
+            selectedSows.delete(s.tagNo);
+            card.style.border = '1px solid #e5e7eb';
+          } else {
+            selectedSows.add(s.tagNo);
+            card.style.border = '2px solid #8b5cf6';
+          }
+        });
+      } else {
+        card.href = 'pig.html?tag='+encodeURIComponent(s.tagNo);
+      }
+      
       card.innerHTML = `
         <div style="display:flex;gap:12px;align-items:center">
           <img src="${s.imageUrl || s.image || s.image_url || '/pics/Pig.jpeg'}" alt="pig" style="width:56px;height:56px;border-radius:8px;object-fit:cover" />
@@ -130,6 +154,92 @@
       });
     },60);
   }
+
+  // Add sow event button handler
+  document.getElementById('addSowEventBtn').addEventListener('click', () => {
+    sowEventSelectionMode = !sowEventSelectionMode;
+    
+    if (sowEventSelectionMode) {
+      document.getElementById('addSowEventBtn').textContent = 'Done Selecting';
+      document.getElementById('addSowEventBtn').style.background = '#22c55e';
+      selectedSows.clear();
+      renderSows();
+    } else {
+      if (selectedSows.size > 0) {
+        showSowEventModal();
+      }
+      document.getElementById('addSowEventBtn').textContent = 'Add Event to Sows';
+      document.getElementById('addSowEventBtn').style.background = '#8b5cf6';
+      sowEventSelectionMode = false;
+      renderSows();
+    }
+  });
+
+  function showSowEventModal() {
+    const modal = document.createElement('div');
+    modal.id = 'sowEventModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:1000';
+    
+    modal.innerHTML = `
+      <div style="background:white;padding:24px;border-radius:8px;max-width:400px;width:90%">
+        <h3 style="margin-top:0">Add Event to ${selectedSows.size} Sow(s)</h3>
+        <label style="display:block;margin-top:16px;font-weight:600">Event Type</label>
+        <select id="sowEventType" style="width:100%;padding:8px;margin:8px 0;border:1px solid #d1d5db;border-radius:4px">
+          <option value="Vaccination">Vaccination</option>
+          <option value="Health Check">Health Check</option>
+          <option value="Treatment">Treatment</option>
+          <option value="Breeding">Breeding</option>
+          <option value="Other">Other</option>
+        </select>
+        <label style="display:block;margin-top:12px;font-weight:600">Date</label>
+        <input type="date" id="sowEventDate" style="width:100%;padding:8px;margin:8px 0;border:1px solid #d1d5db;border-radius:4px" />
+        <label style="display:block;margin-top:12px;font-weight:600">Notes</label>
+        <textarea id="sowEventNotes" rows="3" style="width:100%;padding:8px;margin:8px 0;border:1px solid #d1d5db;border-radius:4px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn" id="saveSowEvent">Save</button>
+          <button class="btn" id="cancelSowEvent">Cancel</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.getElementById('sowEventDate').valueAsDate = new Date();
+
+    document.getElementById('cancelSowEvent').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    document.getElementById('saveSowEvent').addEventListener('click', async () => {
+      const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+      
+      const eventData = {
+        type: document.getElementById('sowEventType').value,
+        date: document.getElementById('sowEventDate').value,
+        notes: document.getElementById('sowEventNotes').value || null,
+        sowTags: Array.from(selectedSows)
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventData)
+        });
+
+        if (response.ok) {
+          alert(`Event added successfully for ${selectedSows.size} sow(s)!`);
+          modal.remove();
+          selectedSows.clear();
+        } else {
+          alert('Failed to add event');
+        }
+      } catch (error) {
+        console.error('Error adding event:', error);
+        alert('Error adding event');
+      }
+    });
+  }
+
   window.addEventListener('animalsLoaded', renderSows);
   wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
 
