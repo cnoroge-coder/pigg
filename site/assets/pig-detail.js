@@ -52,9 +52,12 @@
   ready(()=>{
     const tag = param('tag');
     if(!tag) return qs('detailContent').textContent = 'No pig selected';
-  const { AnimalsModule, EventsModule } = window.Modules;
-    const pig = AnimalsModule.getByTag(tag) || AnimalsModule.getSow(tag) || AnimalsModule.boars.find(b=>b.tagNo===tag);
-    if(!pig) return qs('detailContent').textContent = 'Pig not found';
+    
+    // Wait for animals to be loaded from API
+    function loadPigData() {
+      const { AnimalsModule, EventsModule } = window.Modules;
+      const pig = AnimalsModule.getByTag(tag) || AnimalsModule.getSow(tag) || AnimalsModule.boars.find(b=>b.tagNo===tag);
+      if(!pig) return qs('detailContent').textContent = 'Pig not found';
 
   // determine if this is a boar to avoid showing pregnancies UI for boars
   const isBoar = (AnimalsModule.boars || []).some(b=> b.tagNo === pig.tagNo);
@@ -97,6 +100,14 @@
 
     // ensure a lightbox DOM exists; click handling will be delegated below
     ensureLightboxExists();
+    }
+    
+    // Check if animals are already loaded, otherwise wait for event
+    if(window.Modules && window.Modules.AnimalsModule && window.Modules.AnimalsModule.all && window.Modules.AnimalsModule.all.length > 0) {
+      loadPigData();
+    } else {
+      document.addEventListener('animalsLoaded', loadPigData);
+    }
 
     // Details, Events and Pregnancies are rendered into their dedicated panes
       // We render Details, Events and Pregnancies into separate panes defined in the HTML
