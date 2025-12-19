@@ -104,7 +104,90 @@ model Litter {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   
+  // Piglets in this litter
+  piglets       Piglet[]
+  
   @@index([farrowDate])
+}
+
+// ============ PIGLETS ============
+model Piglet {
+  id            String      @id @default(cuid())
+  tagNo         String      @unique
+  litterId      String
+  litter        Litter      @relation(fields: [litterId], references: [id], onDelete: Cascade)
+  sex           String      // 'male', 'female'
+  birthWeight   Float?
+  currentWeight Float?
+  weaningWeight Float?
+  weaningDate   DateTime?
+  status        String      @default("nursing") // 'nursing', 'weaned', 'fattening', 'ready_for_sale', 'sold', 'deceased'
+  healthStatus  String      @default("healthy") // 'healthy', 'sick', 'recovering', 'deceased'
+  notes         String?
+  saleDate      DateTime?
+  salePrice     Float?
+  buyer         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relations
+  weightRecords PigletWeightRecord[]
+  feedRecords   PigletFeedRecord[]
+  
+  @@index([litterId])
+  @@index([status])
+  @@index([sex])
+  @@index([tagNo])
+}
+
+model PigletWeightRecord {
+  id        String    @id @default(cuid())
+  pigletId  String
+  piglet    Piglet    @relation(fields: [pigletId], references: [id], onDelete: Cascade)
+  weight    Float
+  date      DateTime  @default(now())
+  notes     String?
+  createdAt DateTime  @default(now())
+  
+  @@index([pigletId])
+  @@index([date])
+}
+
+model PigletFeedRecord {
+  id        String    @id @default(cuid())
+  pigletId  String
+  piglet    Piglet    @relation(fields: [pigletId], references: [id], onDelete: Cascade)
+  feedType  String
+  quantity  Float
+  unit      String    @default("kg")
+  date      DateTime  @default(now())
+  cost      Float?
+  notes     String?
+  createdAt DateTime  @default(now())
+  
+  @@index([pigletId])
+  @@index([date])
+}
+
+// ============ ALERTS ============
+model Alert {
+  id                String    @id @default(cuid())
+  type              String    // 'health', 'feeding', 'vaccination', 'weaning', 'breeding', 'weight', 'general'
+  priority          String    @default("medium") // 'low', 'medium', 'high', 'critical'
+  title             String
+  description       String?
+  relatedEntityType String?   // 'animal', 'litter', 'piglet', 'pregnancy', 'general'
+  relatedEntityId   String?
+  dueDate           DateTime?
+  status            String    @default("active") // 'active', 'resolved', 'dismissed'
+  resolvedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([relatedEntityType, relatedEntityId])
 }
 
 // ============ EVENTS ============
