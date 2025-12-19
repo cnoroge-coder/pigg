@@ -50,15 +50,12 @@
 
     <section class="section">
       <div class="section-title"><h2>Alerts</h2></div>
-      <div id="alerts" class="list"></div>
+      <div id="alerts" class="list" style="max-height:400px;overflow-y:auto"></div>
     </section>
 
     <section class="section">
-      <div class="section-title"><h2>Charts</h2></div>
-      <div class="charts">
-        <div class="card pad chart">Feed Usage vs Growth (placeholder)</div>
-        <div class="card pad chart">Cost vs Sales (placeholder)</div>
-      </div>
+      <div class="section-title"><h2>Missed Events</h2></div>
+      <div id="missedEvents" class="list" style="max-height:400px;overflow-y:auto"></div>
     </section>
   </main>
 
@@ -76,8 +73,9 @@
   <script src="assets/app.js"></script>
   <script>
   // Wait for API data to load before rendering
-  window.addEventListener('animalsLoaded', (e) => {
+  window.addEventListener('animalsLoaded', async (e) => {
     const { AnimalsModule } = window.Modules;
+    const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
     
     // Separate piglets by gender
     const piglets = Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets : [];
@@ -99,9 +97,9 @@
       {label:'Total Animals', value:totalPigs, link: null},
       {label:'Sows', value:AnimalsModule.sows.length, link: 'sows.html'},
       {label:'Boars', value:AnimalsModule.boars.length, link: 'boars.html'},
-      {label:'Total Piglets', value:piglets.length, link: null},
-      {label:'Male Piglets', value:malePiglets.length + unknownPiglets.length, link: null},
-      {label:'Female Piglets', value:femalePiglets.length, link: null},
+      {label:'Total Piglets', value:piglets.length, link: 'piglets.html'},
+      {label:'Male Piglets', value:malePiglets.length + unknownPiglets.length, link: 'piglets.html'},
+      {label:'Female Piglets', value:femalePiglets.length, link: 'piglets.html'},
       {label:'Total Litters', value:totalLitters, link: 'litters.html'},
       {label:'Nursing Litters', value:nursingLitters, link: 'litters.html'}
     ];
@@ -116,6 +114,94 @@
       c.innerHTML = `<div class="label">${m.label}</div><div class="value">${m.value}</div>`;
       tiles.append(c);
     });
+
+    // Load and display mature piglets alerts
+    try {
+      const response = await fetch(`${API_BASE_URL}/piglets`);
+      const allPiglets = await response.json();
+      const today = new Date();
+      
+      const alertsDiv = document.getElementById('alerts');
+      alertsDiv.innerHTML = '';
+      
+      // Check for mature piglets
+      const maturePiglets = allPiglets.filter(p => {
+        if (p.maturityWeeks && p.maturitySetDate) {
+          const setDate = new Date(p.maturitySetDate);
+          const weeksPassed = Math.floor((today - setDate) / (7 * 24 * 60 * 60 * 1000));
+          return weeksPassed >= p.maturityWeeks;
+        }
+        return false;
+      });
+
+      if (maturePiglets.length > 0) {
+        maturePiglets.forEach(p => {
+          const alert = document.createElement('div');
+          alert.className = 'card pad';
+          alert.style.borderLeft = '4px solid #22c55e';
+          alert.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700">🎯 Piglet Maturity Reached</div>
+                <div class="small">Piglet ${p.tagNo || p.name || p.id} has reached maturity target</div>
+              </div>
+              <a href="piglet.html?id=${p.id}" class="btn">View</a>
+            </div>
+          `;
+          alertsDiv.appendChild(alert);
+        });
+      }
+
+      if (alertsDiv.innerHTML === '') {
+        alertsDiv.innerHTML = '<div class="card pad small" style="color:#a1a1aa">No alerts at this time</div>';
+      }
+    } catch (error) {
+      console.error('Error loading alerts:', error);
+    }
+
+    // Load and display missed events
+    try {
+      const eventsResponse = await fetch(`${API_BASE_URL}/events`);
+      const allEvents = await eventsResponse.json();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const missedEventsDiv = document.getElementById('missedEvents');
+      missedEventsDiv.innerHTML = '';
+
+      const missedEvents = allEvents.filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate < today && !e.resolved;
+      });
+
+      if (missedEvents.length > 0) {
+        missedEvents.forEach(e => {
+          const eventDate = new Date(e.date);
+          const daysOverdue = Math.floor((today - eventDate) / (24 * 60 * 60 * 1000));
+          
+          const alert = document.createElement('div');
+          alert.className = 'card pad';
+          alert.style.borderLeft = '4px solid #ef4444';
+          alert.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700">⚠️ Missed Event: ${e.type}</div>
+                <div class="small">${daysOverdue} day(s) overdue - ${e.date}</div>
+                ${e.notes ? `<div class="small" style="margin-top:4px">${e.notes}</div>` : ''}
+              </div>
+              <a href="events.html" class="btn">Resolve</a>
+            </div>
+          `;
+          missedEventsDiv.appendChild(alert);
+        });
+      } else {
+        missedEventsDiv.innerHTML = '<div class="card pad small" style="color:#a1a1aa">No missed events</div>';
+      }
+    } catch (error) {
+      console.error('Error loading missed events:', error);
+      document.getElementById('missedEvents').innerHTML = '<div class="card pad small" style="color:#a1a1aa">Unable to load events</div>';
+    }
   });
   
   document.getElementById('year').textContent = new Date().getFullYear();
@@ -123,3 +209,4 @@
   </script>
 </body>
 </html>
+

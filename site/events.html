@@ -200,6 +200,16 @@
           targetsDisplay = event.sowId ? 'Sow' : 'Boar';
         }
 
+        const isOverdue = isPast && !event.resolved;
+        let statusBadge = '';
+        if (event.resolved) {
+          statusBadge = '<span class="badge ok" style="background:#22c55e">Resolved</span>';
+        } else if (isOverdue) {
+          statusBadge = '<span class="badge danger" style="background:#ef4444">Overdue</span>';
+        } else {
+          statusBadge = '<span class="badge" style="background:#3b82f6">Scheduled</span>';
+        }
+
         card.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:start">
             <div>
@@ -208,15 +218,38 @@
             </div>
             <div style="text-align:right">
               <div style="color:${dateColor};font-weight:600">${new Date(event.date).toLocaleDateString()}</div>
-              <div class="small" style="color:#6b7280">${isPast ? 'Completed' : 'Scheduled'}</div>
+              <div style="margin-top:4px">${statusBadge}</div>
             </div>
           </div>
           ${event.notes ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;color:#6b7280">${event.notes}</div>` : ''}
-          <button class="btn" style="margin-top:12px;width:100%;background:#ef4444;border-color:#dc2626;color:#fff" onclick="deleteEvent('${event.id}')">Delete</button>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            ${!event.resolved && isPast ? `<button class="btn" style="flex:1;background:#22c55e;border-color:#16a34a;color:#fff" onclick="resolveEvent('${event.id}')">Mark as Resolved</button>` : ''}
+            <button class="btn" style="flex:1;background:#ef4444;border-color:#dc2626;color:#fff" onclick="deleteEvent('${event.id}')">Delete</button>
+          </div>
         `;
         
         grid.appendChild(card);
       });
+    }
+
+    async function resolveEvent(eventId) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resolved: true })
+        });
+
+        if (response.ok) {
+          alert('Event marked as resolved!');
+          await loadEvents();
+        } else {
+          alert('Failed to resolve event');
+        }
+      } catch (error) {
+        console.error('Error resolving event:', error);
+        alert('Error resolving event');
+      }
     }
 
     async function deleteEvent(eventId) {

@@ -315,6 +315,7 @@
     }
 
     function showMaturityModal() {
+      const apiUrl = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
       const modal = document.createElement('div');
       modal.id = 'maturityModal';
       modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:1000';
@@ -348,7 +349,7 @@
         try {
           // Update each selected piglet
           for (const pigletId of selectedPiglets) {
-            await fetch(`${API_BASE_URL}/piglets/${pigletId}`, {
+            await fetch(`${apiUrl}/piglets/${pigletId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
