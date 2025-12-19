@@ -19,8 +19,9 @@
   async function trySupabaseInsert(table, row){
     if(!window || !window.sb) return null;
     try{
-      // supabase-js v1/v2 return shape: { data, error } or {data, error}
-      const res = await window.sb.from(table).insert([row]).select();
+      // Fix: Use uppercase table name to match Prisma schema
+      const tableName = table === 'animals' ? 'Animal' : table;
+      const res = await window.sb.from(tableName).insert([row]).select();
       // v2: res.error, res.data
       if(res.error){ console.warn('Supabase insert error', table, res.error); return { error: res.error }; }
       if(res.data) return Array.isArray(res.data)? res.data[0] : res.data;
