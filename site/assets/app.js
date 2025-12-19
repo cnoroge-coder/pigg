@@ -61,10 +61,10 @@ function setupMenuToggle(){
   function buildNav(){
     const links = [
       { href:'./', label:'Dashboard' },
-      { href:'pigs.html', label:'Pigs' },
       { href:'sows.html', label:'Sows' },
       { href:'boars.html', label:'Boars' },
       { href:'litters.html', label:'Litters' },
+      { href:'piglets.html', label:'Piglets' },
       { href:'feed.html', label:'Feed' },
       { href:'events.html', label:'Events' },
       { href:'health.html', label:'Health' },
