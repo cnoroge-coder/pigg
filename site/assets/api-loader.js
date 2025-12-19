@@ -49,6 +49,23 @@
     
     console.log('✅ Animals loaded and ready!');
     
+    // Load litters
+    console.log('🔄 Loading litters from backend API...');
+    try {
+      const littersResponse = await fetch(`${API_BASE_URL}/litters`);
+      if (littersResponse.ok) {
+        const litters = await littersResponse.json();
+        console.log('📦 Litters loaded:', litters.length);
+        window.Modules.AnimalsModule.litters = litters;
+      } else {
+        console.warn('⚠️ Failed to load litters:', littersResponse.status);
+        window.Modules.AnimalsModule.litters = [];
+      }
+    } catch (error) {
+      console.error('❌ Error loading litters:', error);
+      window.Modules.AnimalsModule.litters = [];
+    }
+    
     // Trigger a custom event so pages know data is ready
     window.dispatchEvent(new CustomEvent('animalsLoaded', { detail: { animals, sows, boars, piglets } }));
     

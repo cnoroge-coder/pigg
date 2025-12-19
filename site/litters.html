@@ -48,6 +48,7 @@
 
   <script src="assets/supa-config.js"></script>
   <script src="assets/supabase-client.js"></script>
+  <script src="assets/api-loader.js"></script>
   <script src="assets/modules.js"></script>
   <script src="assets/app.js"></script>
   <script>
@@ -80,16 +81,32 @@
   
 
   function renderLitters(){
-    const root = document.getElementById('litters'); root.innerHTML='';
-    const LITTERS = window.Modules.AnimalsModule.litters || [];
+    const root = document.getElementById('litters'); 
+    if (!root) return;
+    
+    root.innerHTML='';
+    const LITTERS = window.Modules?.AnimalsModule?.litters || [];
+    
+    console.log('Rendering litters:', LITTERS.length);
+    
+    if (LITTERS.length === 0) {
+      root.innerHTML = '<div class="card small">No litters recorded yet. <a href="add-litter.html">Add a litter</a></div>';
+      return;
+    }
+    
     LITTERS.forEach(l=>{
       const row = document.createElement('div'); row.className='tr';
       row.style.cursor = 'pointer';
+      
+      // Get sow name from pregnancy data
+      const sowName = l.pregnancy?.sow?.name || l.pregnancy?.sow?.tagNo || 'Unknown';
+      const farrowDate = l.farrowDate ? new Date(l.farrowDate).toLocaleDateString() : 'N/A';
+      
       row.innerHTML = `
-        <div>${l.sowTag}</div>
-        <div class="kpi"><span class="dot" style="background:#22c55e"></span> ${l.piglets? l.piglets.length:0}</div>
-        <div class="kpi"><span class="dot" style="background:#ef4444"></span> 0</div>
-        <div><span class="badge">${l.status||'Nursing'}</span></div>
+        <div>${sowName}</div>
+        <div class="kpi"><span class="dot" style="background:#22c55e"></span> ${l.alive || 0}</div>
+        <div class="kpi"><span class="dot" style="background:#ef4444"></span> ${l.dead || 0}</div>
+        <div><span class="badge">${farrowDate}</span></div>
       `;
       row.addEventListener('click', ()=> showLitterDetails(l));
       root.append(row);
@@ -97,7 +114,18 @@
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    renderLitters();
+    // Wait for animals (and litters) to load before rendering
+    window.addEventListener('animalsLoaded', () => {
+      console.log('Animals loaded, rendering litters...');
+      renderLitters();
+    });
+    
+    // Try immediate render if data already available
+    if (window.Modules?.AnimalsModule?.litters) {
+      renderLitters();
+    }
+    
+    wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
     wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
   });
   </script>
