@@ -12,6 +12,7 @@ export class AnimalsService {
       data: {
         ...createAnimalDto,
         dob: createAnimalDto.dob ? new Date(createAnimalDto.dob) : null,
+        entryDate: createAnimalDto.entryDate ? new Date(createAnimalDto.entryDate) : null,
       },
     });
     return animal;
@@ -67,6 +68,7 @@ export class AnimalsService {
       data: {
         ...updateAnimalDto,
         dob: updateAnimalDto.dob ? new Date(updateAnimalDto.dob) : undefined,
+        entryDate: updateAnimalDto.entryDate ? new Date(updateAnimalDto.entryDate) : undefined,
       },
     });
     return animal;

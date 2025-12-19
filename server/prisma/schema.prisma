@@ -1,5 +1,5 @@
 // Prisma Schema for Pig Farm Management System
-// This is the actual schema used by the backend
+// Comprehensive schema matching frontend requirements
 
 generator client {
   provider = "prisma-client-js"
@@ -10,30 +10,200 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Simple Animal model to start with
-// You can expand this based on docs/database-schema.prisma
+// ============ ANIMALS ============
 model Animal {
-  id          String   @id @default(cuid())
-  tagNo       String   @unique
-  name        String?
-  type        String   // 'sow' or 'boar'
-  breed       String?
-  gender      String?
-  dob         DateTime?
-  weight      Float?
-  group       String?
-  imageUrl    String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id              String          @id @default(cuid())
+  tagNo           String          @unique
+  name            String?
+  type            String          // 'sow', 'boar', 'piglet'
+  breed           String?
+  dob             DateTime?
+  weight          Float?
+  weightHistory   Json?           // array of {date, weight}
+  litterNo        String?
+  stage           String?         // 'grower', 'finisher', etc
+  status          String?         // 'active', 'sold', 'deceased'
+  entryDate       DateTime?
+  obtainedMethod  String?         // 'Bred On Farm', 'Purchased', etc
+  source          String?
+  motherTag       String?
+  fatherTag       String?
+  group           String?
+  imageUrl        String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  healthRecords   HealthRecord[]
+  events          Event[]
+  pregnancies     Pregnancy[]     @relation("SowPregnancies")
+  asBoar          Pregnancy[]     @relation("BoarBreedings")
+  
   @@index([type])
   @@index([tagNo])
+  @@index([status])
 }
 
-// Add more models as you develop:
-// - Events
-// - Breeding records
-// - Litters
-// - Feed records
-// etc.
+// ============ HEALTH ============
+model HealthRecord {
+  id          String    @id @default(cuid())
+  animalId    String
+  animal      Animal    @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  date        DateTime  @default(now())
+  type        String    // 'checkup', 'vaccination', 'treatment', 'injury', 'illness'
+  condition   String?   // 'healthy', 'sick', 'recovering'
+  treatment   String?
+  medication  String?
+  veterinarian String?
+  cost        Float?
+  notes       String?
+  followUpDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([animalId])
+  @@index([date])
+}
+
+// ============ BREEDING & PREGNANCY ============
+model Pregnancy {
+  id                String    @id @default(cuid())
+  sowId             String
+  sow               Animal    @relation("SowPregnancies", fields: [sowId], references: [id], onDelete: Cascade)
+  boarId            String?
+  boar              Animal?   @relation("BoarBreedings", fields: [boarId], references: [id])
+  dateServed        DateTime
+  expectedFarrowing DateTime  // dateServed + 114 days
+  actualFarrowing   DateTime?
+  status            String    @default("pregnant") // 'pregnant', 'farrowed', 'failed'
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Linked litter
+  litter            Litter?
+  
+  @@index([sowId])
+  @@index([status])
+  @@index([expectedFarrowing])
+}
+
+// ============ LITTERS ============
+model Litter {
+  id            String      @id @default(cuid())
+  pregnancyId   String      @unique
+  pregnancy     Pregnancy   @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+  farrowDate    DateTime
+  numberBorn    Int
+  alive         Int
+  dead          Int
+  weaningDate   DateTime?
+  weaningWeight Float?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@index([farrowDate])
+}
+
+// ============ EVENTS ============
+model Event {
+  id          String    @id @default(cuid())
+  animalId    String?
+  animal      Animal?   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  type        String    // 'breeding', 'health', 'weight', 'movement', 'sale', etc
+  date        DateTime  @default(now())
+  description String?
+  semen       String?   // for breeding events
+  technician  String?
+  returnDate  DateTime? // for heat/breeding cycles
+  metadata    Json?     // flexible field for additional data
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([animalId])
+  @@index([type])
+  @@index([date])
+}
+
+// ============ FEED ============
+model FeedType {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  category    String      // 'starter', 'grower', 'finisher', 'sow'
+  costPerUnit Float
+  unit        String      // 'kg', 'bag'
+  description String?
+  inventory   Float       @default(0)
+  lowThreshold Float?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  usageLogs   FeedLog[]
+}
+
+model FeedLog {
+  id          String    @id @default(cuid())
+  feedTypeId  String
+  feedType    FeedType  @relation(fields: [feedTypeId], references: [id], onDelete: Cascade)
+  quantity    Float     // amount used (negative) or added (positive)
+  reason      String    // 'daily_feed', 'purchase', 'adjustment'
+  groupType   String?   // 'sows', 'boars', 'piglets', 'growers'
+  date        DateTime  @default(now())
+  notes       String?
+  createdAt   DateTime  @default(now())
+  
+  @@index([feedTypeId])
+  @@index([date])
+}
+
+// ============ FINANCE ============
+model Cost {
+  id          String    @id @default(cuid())
+  category    String    // 'feed', 'veterinary', 'labor', 'housing', 'utilities', 'transport', 'other'
+  amount      Float
+  description String?
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([category])
+  @@index([date])
+}
+
+model Sale {
+  id          String    @id @default(cuid())
+  animalTag   String?   // reference to animal tagNo
+  type        String    // 'piglet', 'boar', 'sow', 'meat'
+  quantity    Int       @default(1)
+  pricePerUnit Float
+  totalAmount Float
+  buyer       String?
+  date        DateTime  @default(now())
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([date])
+  @@index([type])
+}
+
+// ============ INVENTORY ============
+model InventoryItem {
+  id          String    @id @default(cuid())
+  name        String
+  category    String    // 'medication', 'equipment', 'supplies'
+  quantity    Float
+  unit        String    // 'pieces', 'liters', 'kg'
+  costPerUnit Float?
+  supplier    String?
+  lowThreshold Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([category])
+}
+

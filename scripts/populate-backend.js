@@ -3,15 +3,22 @@ const API_BASE_URL = 'https://pig-3k5m.onrender.com/api/v1';
 
 const pigs = [
   // Boars
-  { tagNo: 'B001', name: 'Thunder', type: 'boar', breed: 'Duroc', dob: '2023-03-15', weight: 250.5, notes: 'Prime breeding boar' },
-  { tagNo: 'B002', name: 'Duke', type: 'boar', breed: 'Hampshire', dob: '2023-05-20', weight: 235.0, notes: 'Good temperament' },
-  { tagNo: 'B003', name: 'Rocky', type: 'boar', breed: 'Yorkshire', dob: '2023-07-10', weight: 220.0, notes: 'Young breeding stock' },
+  { tagNo: 'B001', name: 'Thunder', type: 'boar', breed: 'Duroc', dob: '2023-03-15', weight: 250.5, status: 'active', notes: 'Prime breeding boar' },
+  { tagNo: 'B002', name: 'Duke', type: 'boar', breed: 'Hampshire', dob: '2023-05-20', weight: 235.0, status: 'active', notes: 'Good temperament' },
+  { tagNo: 'B003', name: 'Rocky', type: 'boar', breed: 'Yorkshire', dob: '2023-07-10', weight: 220.0, status: 'active', notes: 'Young breeding stock' },
   
   // Sows
-  { tagNo: 'S001', name: 'Daisy', type: 'sow', breed: 'Large White', dob: '2022-06-10', weight: 180.0, notes: 'Experienced mother, 3 litters' },
-  { tagNo: 'S002', name: 'Bella', type: 'sow', breed: 'Landrace', dob: '2022-08-15', weight: 175.5, notes: 'Currently pregnant' },
-  { tagNo: 'S003', name: 'Lucy', type: 'sow', breed: 'Duroc', dob: '2023-01-20', weight: 165.0, notes: 'First time mother' },
-  { tagNo: 'S004', name: 'Molly', type: 'sow', breed: 'Yorkshire', dob: '2023-03-05', weight: 170.0, notes: 'Excellent mothering instincts' }
+  { tagNo: 'S001', name: 'Daisy', type: 'sow', breed: 'Large White', dob: '2022-06-10', weight: 180.0, status: 'active', notes: 'Experienced mother, 3 litters' },
+  { tagNo: 'S002', name: 'Bella', type: 'sow', breed: 'Landrace', dob: '2022-08-15', weight: 175.5, status: 'active', notes: 'Currently pregnant' },
+  { tagNo: 'S003', name: 'Lucy', type: 'sow', breed: 'Duroc', dob: '2023-01-20', weight: 165.0, status: 'active', notes: 'First time mother' },
+  { tagNo: 'S004', name: 'Molly', type: 'sow', breed: 'Yorkshire', dob: '2023-03-05', weight: 170.0, status: 'active', notes: 'Excellent mothering instincts' },
+  
+  // Piglets
+  { tagNo: 'P001', name: 'Tiny', type: 'piglet', breed: 'Crossbred', dob: '2024-11-01', weight: 15.5, status: 'active', motherTag: 'S001', fatherTag: 'B001', litterNo: 'L001', stage: 'grower' },
+  { tagNo: 'P002', name: 'Spots', type: 'piglet', breed: 'Crossbred', dob: '2024-11-01', weight: 14.8, status: 'active', motherTag: 'S001', fatherTag: 'B001', litterNo: 'L001', stage: 'grower' },
+  { tagNo: 'P003', name: 'Squeaky', type: 'piglet', breed: 'Crossbred', dob: '2024-11-01', weight: 16.2, status: 'active', motherTag: 'S001', fatherTag: 'B001', litterNo: 'L001', stage: 'grower' },
+  { tagNo: 'P004', name: 'Curly', type: 'piglet', breed: 'Crossbred', dob: '2024-11-15', weight: 12.0, status: 'active', motherTag: 'S003', fatherTag: 'B002', litterNo: 'L002', stage: 'grower' },
+  { tagNo: 'P005', name: 'Pinky', type: 'piglet', breed: 'Crossbred', dob: '2024-11-15', weight: 11.5, status: 'active', motherTag: 'S003', fatherTag: 'B002', litterNo: 'L002', stage: 'grower' }
 ];
 
 async function populateData() {
@@ -52,6 +59,7 @@ async function populateData() {
   console.log(`Total animals in backend: ${animals.length}`);
   console.log(`Sows: ${animals.filter(a => a.type === 'sow').length}`);
   console.log(`Boars: ${animals.filter(a => a.type === 'boar').length}`);
+  console.log(`Piglets: ${animals.filter(a => a.type === 'piglet').length}`);
 }
 
 populateData().catch(console.error);
