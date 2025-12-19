@@ -81,12 +81,12 @@
   <script src="assets/modules.js"></script>
   <script src="assets/app.js"></script>
   <script>
+    const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
     let allPiglets = [];
     let currentFilter = 'all';
 
     async function loadPiglets() {
       try {
-        const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
         console.log('🔄 Loading piglets from:', `${API_BASE_URL}/piglets`);
         const response = await fetch(`${API_BASE_URL}/piglets`);
         

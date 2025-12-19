@@ -34,6 +34,7 @@
         <button id="addWeightBtn" class="btn">+ Weight</button>
         <button id="addFeedBtn" class="btn">+ Feed</button>
         <button id="addEventBtn" class="btn">+ Event</button>
+        <button id="deleteBtn" class="btn" style="background:#ef4444;border-color:#dc2626;color:#fff">Delete</button>
       </div>
     </div>
 
@@ -268,6 +269,8 @@
       // Calculate previous weight and days since last weigh
       let previousWeight = '-';
       let daysSinceWeigh = '-';
+      let weightChange = '';
+      let weightChangeColor = '#6b7280';
       
       if (weightRecords.length > 0) {
         // Sort by date descending
@@ -275,9 +278,29 @@
         
         // Get previous weight (second most recent)
         if (sorted.length > 1) {
-          previousWeight = sorted[1].weight + ' kg';
+          const prevWeight = sorted[1].weight;
+          const currentWeight = sorted[0].weight;
+          previousWeight = prevWeight + ' kg';
+          
+          // Calculate weight change
+          const change = (currentWeight - prevWeight).toFixed(2);
+          if (change > 0) {
+            weightChange = `+${change} kg`;
+            weightChangeColor = '#22c55e'; // green
+          } else if (change < 0) {
+            weightChange = `${change} kg`;
+            weightChangeColor = '#ef4444'; // red
+          } else {
+            weightChange = 'No change';
+            weightChangeColor = '#6b7280'; // gray
+          }
         } else {
           previousWeight = currentPiglet.birthWeight ? currentPiglet.birthWeight + ' kg' : '-';
+          if (currentPiglet.birthWeight && sorted[0].weight) {
+            const change = (sorted[0].weight - currentPiglet.birthWeight).toFixed(2);
+            weightChange = change > 0 ? `+${change} kg` : `${change} kg`;
+            weightChangeColor = change >= 0 ? '#22c55e' : '#ef4444';
+          }
         }
         
         // Days since most recent weight record
@@ -301,6 +324,7 @@
             <div>
               <div class="small">Previous Weight</div>
               <div style="font-size:20px;font-weight:600">${previousWeight}</div>
+              ${weightChange ? `<div class="small" style="color:${weightChangeColor};font-weight:600;margin-top:4px">${weightChange}</div>` : ''}
             </div>
             <div>
               <div class="small">Last Weighed</div>
@@ -385,11 +409,11 @@
     function renderEvents() {
       const pane = document.getElementById('eventsPane');
       
-      // Mock upcoming events for now - will be replaced with actual API call
-      const upcomingEvents = [
-        { type: 'Vaccination', date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), description: 'Scheduled vaccination' },
-        { type: 'Weaning', date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), description: 'Estimated weaning date' }
-      ];
+      // Load events from API
+      const upcomingEvents = [];
+      // TODO: Fetch from API when events endpoint is ready
+      // const eventsResponse = await fetch(`${API_BASE_URL}/events?pigletId=${currentPiglet.id}&upcoming=true`);
+      // if (eventsResponse.ok) upcomingEvents = await eventsResponse.json();
       
       let html = '<div class="card pad">';
       html += '<h3 style="margin-top:0">Upcoming Events</h3>';
@@ -721,6 +745,30 @@
     // Event button - placeholder for now
     document.getElementById('addEventBtn').addEventListener('click', () => {
       alert('Event functionality coming soon! This will allow you to add health checks, vaccinations, treatments, and other events.');
+    });
+
+    // Delete button
+    document.getElementById('deleteBtn').addEventListener('click', async () => {
+      if (!currentPiglet) return;
+      
+      const confirmed = confirm(`Are you sure you want to delete piglet ${currentPiglet.tagNo}? This action cannot be undone.`);
+      if (!confirmed) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/piglets/${currentPiglet.id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Piglet deleted successfully!');
+          window.location.href = 'piglets.html';
+        } else {
+          alert('Failed to delete piglet');
+        }
+      } catch (error) {
+        console.error('Error deleting piglet:', error);
+        alert('Error deleting piglet');
+      }
     });
 
     // Initialize
