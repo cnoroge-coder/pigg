@@ -48,21 +48,22 @@
 
   function mapAnimalRow(a){
     return {
-      tag_no: a.tagNo || a.tag || a.id || null,
+      tagNo: a.tagNo || a.tag || a.id || null,
       name: a.name || null,
-      image_url: a.imageUrl || a.image || a.image_url || null,
+      imageUrl: a.imageUrl || a.image || a.image_url || null,
       type: a.type || (a.tagNo && String(a.tagNo).toLowerCase().startsWith('sow')? 'sow' : null),
       dob: a.dob || null,
-      gender: a.gender || null,
       breed: a.breed || null,
       group: a.group || a.herd || null,
       weight: a.weight || null,
-      weight_history: a.weightHistory || a.weight_history || null,
-      litter_no: a.litterNo || a.litter_no || null,
+      weightHistory: a.weightHistory || a.weight_history || null,
+      litterNo: a.litterNo || a.litter_no || null,
       stage: a.stage || null,
       status: a.status || null,
-      entry_date: a.entryDate || a.entry_date || null,
-      obtained_method: a.obtainedMethod || a.obtained_method || null,
+      entryDate: a.entryDate || a.entry_date || null,
+      obtainedMethod: a.obtainedMethod || a.obtained_method || null,
+      motherTag: a.motherTag || a.mother_tag || null,
+      fatherTag: a.fatherTag || a.father_tag || null,
       source: a.source || null,
       notes: a.notes || null
     };

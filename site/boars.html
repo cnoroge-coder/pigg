@@ -42,6 +42,7 @@
   <script src="assets/supa-config.js"></script>
   <script src="assets/supabase-client.js"></script>
   <script src="assets/modules.js"></script>
+  <script src="assets/api-loader.js"></script>
   <script src="assets/app.js"></script>
   <script>
   function renderBoars(){
@@ -71,7 +72,8 @@
       });
     },60);
   }
-  renderBoars(); wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
+  window.addEventListener('animalsLoaded', renderBoars);
+  wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
   </script>
 </body>
 </html>

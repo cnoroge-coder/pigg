@@ -45,6 +45,7 @@
   <script src="assets/supa-config.js"></script>
   <script src="assets/supabase-client.js"></script>
   <script src="assets/modules.js"></script>
+  <script src="assets/api-loader.js"></script>
   <script src="assets/app.js"></script>
   <script>
   function renderSows(){
@@ -89,7 +90,8 @@
       });
     },60);
   }
-  renderSows(); wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
+  window.addEventListener('animalsLoaded', renderSows);
+  wireActiveNav(); document.getElementById('year').textContent = new Date().getFullYear();
 
 // Pregnancies panel helpers (inline per-sow behaviour similar to events)
 function renderSowPregPanel(tag){
