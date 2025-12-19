@@ -32,6 +32,7 @@
 			<div style="display:flex;gap:8px;align-items:center">
 				<button id="tabDetails" class="btn">Details</button>
 				<button id="tabEvents" class="btn">Events</button>
+				<button id="deleteLitterBtn" class="btn" style="background:#ef4444;border-color:#dc2626;color:#fff">Delete</button>
 			</div>
 		</div>
 
@@ -266,6 +267,33 @@ function setupLitterEvents(litter){
 				});
 			}
 	}
+
+	// Delete litter handler
+	document.getElementById('deleteLitterBtn')?.addEventListener('click', async () => {
+		const params = new URLSearchParams(window.location.search);
+		const id = params.get('id');
+		if (!id) return;
+		
+		const confirmed = confirm('Are you sure you want to delete this litter? This action cannot be undone.');
+		if (!confirmed) return;
+		
+		try {
+			const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+			const response = await fetch(`${API_BASE_URL}/litters/${id}`, {
+				method: 'DELETE'
+			});
+
+			if (response.ok) {
+				alert('Litter deleted successfully!');
+				window.location.href = 'litters.html';
+			} else {
+				alert('Failed to delete litter');
+			}
+		} catch (error) {
+			console.error('Error deleting litter:', error);
+			alert('Error deleting litter');
+		}
+	});
 
 	document.addEventListener('DOMContentLoaded', ()=>{ renderLitter(); wireActiveNav && wireActiveNav(); });
 	</script>

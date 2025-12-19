@@ -478,5 +478,40 @@
         form.remove(); container.style.display='block'; location.reload();
       });
     });
+    
+    // Delete pig handler
+    const deletePigBtn = document.getElementById('deletePigBtn');
+    if (deletePigBtn) {
+      deletePigBtn.addEventListener('click', async () => {
+        const tag = param('tag');
+        if (!tag) return;
+        
+        const confirmed = confirm(`Are you sure you want to delete pig ${tag}? This action cannot be undone.`);
+        if (!confirmed) return;
+        
+        try {
+          const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+          const response = await fetch(`${API_BASE_URL}/animals/${encodeURIComponent(tag)}`, {
+            method: 'DELETE'
+          });
+
+          if (response.ok) {
+            alert('Pig deleted successfully!');
+            // Determine if it was a sow or boar and redirect appropriately
+            const pig = AnimalsModule.getByTag(tag) || AnimalsModule.getSow(tag) || AnimalsModule.boars.find(b=>b.tagNo===tag);
+            if (pig && AnimalsModule.sows.includes(pig)) {
+              window.location.href = 'sows.html';
+            } else {
+              window.location.href = 'boars.html';
+            }
+          } else {
+            alert('Failed to delete pig');
+          }
+        } catch (error) {
+          console.error('Error deleting pig:', error);
+          alert('Error deleting pig');
+        }
+      });
+    }
   });
 })();
