@@ -125,7 +125,7 @@
         refreshParents(); // new parents available
         
         // Reload the page after 1 second to show the new pig
-        setTimeout(() => window.location.href = 'pigs.html', 1000);
+        setTimeout(() => window.location.href = './', 1000);
       }catch(e){
         console.warn('Error saving pig', e);
         setMessage('Failed to save pig: ' + e.message,'error');

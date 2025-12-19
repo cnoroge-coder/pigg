@@ -14,7 +14,6 @@
       <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
       <nav class="nav-links">
   <a href="./">Dashboard</a>
-  <a href="pigs.html">Pigs</a>
   <a href="sows.html">Sows</a>
   <a href="boars.html">Boars</a>
         <a href="litters.html">Litters</a>
@@ -34,30 +33,27 @@
       <div class="overlay">
         <div>
           <h1>Command Center</h1>
-          <p class="small">Key metrics, alerts and trends at a glance</p>
+          <p class="small">All your pigs and key metrics at a glance</p>
         </div>
       </div>
     </section>
 
     <section class="section">
       <div class="section-title">
-        <h2>Key Metrics</h2>
-        <span class="badge ok"><span class="dot" style="background:#22c55e"></span> Healthy</span>
+        <h2>All Pigs</h2>
+        <a class="btn" href="add-pig.html">＋ Add Pig</a>
       </div>
-      <div id="tiles" class="grid tiles"></div>
+      <div id="totals" class="grid tiles" style="margin-bottom:18px"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><h2>Quick Access</h2></div>
+      <div id="pigList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
     </section>
 
     <section class="section">
       <div class="section-title"><h2>Alerts</h2></div>
       <div id="alerts" class="list"></div>
-    </section>
-
-    <section class="section">
-      <div class="section-title"><h2>Charts</h2></div>
-      <div class="charts">
-        <div class="card pad chart">Feed Usage vs Growth (placeholder)</div>
-        <div class="card pad chart">Cost vs Sales (placeholder)</div>
-      </div>
     </section>
   </main>
 
@@ -73,8 +69,75 @@
   <script src="assets/modules.js"></script>
   <script src="assets/api-loader.js"></script>
   <script src="assets/app.js"></script>
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script>
+  // Wait for API data to load before rendering
+  window.addEventListener('animalsLoaded', (e) => {
+    const { AnimalsModule } = window.Modules;
+    const totals = document.getElementById('totals');
+    const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + (Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0);
+    const totalPiglets = Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0;
+    const sowCount = AnimalsModule.sows.length;
+    const boarCount = AnimalsModule.boars.length;
+    totals.innerHTML = '';
+    [
+      {label:'Total pigs', value:totalPigs},
+      {label:'Total piglets', value:totalPiglets},
+      {label:'Total sows', value:sowCount},
+      {label:'Total boars', value:boarCount}
+    ].forEach(m=>{
+      const c=document.createElement('div'); c.className='card pad tile';
+      c.innerHTML = `<div class="label">${m.label}</div><div class="value">${m.value}</div>`;
+      totals.append(c);
+    });
+
+    // Quick access cards
+    const root = document.getElementById('pigList'); root.innerHTML='';
+    const sowsCard = document.createElement('a');
+    sowsCard.href = 'sows.html'; sowsCard.className = 'card pad';
+    sowsCard.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-weight:700">View Sows</div>
+        <div class="small">See all female breeders on the farm</div>
+        <div style="height:8px"></div>
+        <div class="badge ok">Total: ${sowCount}</div>
+      </div>
+    `;
+
+    const boarsCard = document.createElement('a');
+    boarsCard.href = 'boars.html'; boarsCard.className = 'card pad';
+    boarsCard.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-weight:700">View Boars</div>
+        <div class="small">See all male breeders on the farm</div>
+        <div style="height:8px"></div>
+        <div class="badge">Total: ${boarCount}</div>
+      </div>
+    `;
+
+    const pigletsPreview = document.createElement('div'); pigletsPreview.className='card pad';
+    pigletsPreview.innerHTML = `
+      <div style="font-weight:700">Piglets</div>
+      <div class="small">Growing young stock</div>
+      <div style="height:8px"></div>
+      <div class="small">Count: ${totalPiglets}</div>
+    `;
+
+    const eventsCount = (window.Modules.EventsModule && window.Modules.EventsModule.events) ? window.Modules.EventsModule.events.length : 0;
+    const eventsCard = document.createElement('a'); eventsCard.href = 'events.html'; eventsCard.className='card pad';
+    eventsCard.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-weight:700">Events</div>
+        <div class="small">Upcoming & recent events</div>
+        <div style="height:8px"></div>
+        <div class="badge">Total: ${eventsCount}</div>
+      </div>
+    `;
+
+    root.append(sowsCard, boarsCard, pigletsPreview, eventsCard);
+  });
+  
+  document.getElementById('year').textContent = new Date().getFullYear();
+  wireActiveNav();
+  </script>
 </body>
 </html>
-<-- recent Cache bust 1766069529 -->
-<-- recent Trigger deployment Fri Dec 19 02:02:36 PM EAT 2025 -->
