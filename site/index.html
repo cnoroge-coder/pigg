@@ -33,9 +33,17 @@
       <div class="overlay">
         <div>
           <h1>Command Center</h1>
-          <p class="small">All your pigs and key metrics at a glance</p>
+          <p class="small">Key metrics, alerts and trends at a glance</p>
         </div>
       </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <h2>Key Metrics</h2>
+        <span class="badge ok"><span class="dot" style="background:#22c55e"></span> Healthy</span>
+      </div>
+      <div id="tiles" class="grid tiles"></div>
     </section>
 
     <section class="section">
@@ -44,16 +52,20 @@
         <a class="btn" href="add-pig.html">＋ Add Pig</a>
       </div>
       <div id="totals" class="grid tiles" style="margin-bottom:18px"></div>
-    </section>
-
-    <section class="section">
-      <div class="section-title"><h2>Quick Access</h2></div>
       <div id="pigList" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
     </section>
 
     <section class="section">
       <div class="section-title"><h2>Alerts</h2></div>
       <div id="alerts" class="list"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><h2>Charts</h2></div>
+      <div class="charts">
+        <div class="card pad chart">Feed Usage vs Growth (placeholder)</div>
+        <div class="card pad chart">Cost vs Sales (placeholder)</div>
+      </div>
     </section>
   </main>
 
@@ -73,8 +85,24 @@
   // Wait for API data to load before rendering
   window.addEventListener('animalsLoaded', (e) => {
     const { AnimalsModule } = window.Modules;
-    const totals = document.getElementById('totals');
+    
+    // Populate original Key Metrics tiles
+    const tiles = document.getElementById('tiles');
     const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + (Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0);
+    tiles.innerHTML = '';
+    [
+      {label:'Total Animals', value:totalPigs},
+      {label:'Sows', value:AnimalsModule.sows.length},
+      {label:'Boars', value:AnimalsModule.boars.length},
+      {label:'Piglets', value:Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0}
+    ].forEach(m=>{
+      const c=document.createElement('div'); c.className='card pad tile';
+      c.innerHTML = `<div class="label">${m.label}</div><div class="value">${m.value}</div>`;
+      tiles.append(c);
+    });
+    
+    // Populate pigs section totals
+    const totals = document.getElementById('totals');
     const totalPiglets = Array.isArray(AnimalsModule.piglets) ? AnimalsModule.piglets.length : 0;
     const sowCount = AnimalsModule.sows.length;
     const boarCount = AnimalsModule.boars.length;
