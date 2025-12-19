@@ -112,23 +112,25 @@ model Litter {
 
 // ============ PIGLETS ============
 model Piglet {
-  id            String      @id @default(cuid())
-  tagNo         String      @unique
-  litterId      String
-  litter        Litter      @relation(fields: [litterId], references: [id], onDelete: Cascade)
-  sex           String      // 'male', 'female'
-  birthWeight   Float?
-  currentWeight Float?
-  weaningWeight Float?
-  weaningDate   DateTime?
-  status        String      @default("nursing") // 'nursing', 'weaned', 'fattening', 'ready_for_sale', 'sold', 'deceased'
-  healthStatus  String      @default("healthy") // 'healthy', 'sick', 'recovering', 'deceased'
-  notes         String?
-  saleDate      DateTime?
-  salePrice     Float?
-  buyer         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String      @id @default(cuid())
+  tagNo           String      @unique
+  litterId        String
+  litter          Litter      @relation(fields: [litterId], references: [id], onDelete: Cascade)
+  sex             String      // 'male', 'female'
+  birthWeight     Float?
+  currentWeight   Float?
+  weaningWeight   Float?
+  weaningDate     DateTime?
+  status          String      @default("nursing") // 'nursing', 'weaned', 'fattening', 'ready_for_sale', 'sold', 'deceased'
+  healthStatus    String      @default("healthy") // 'healthy', 'sick', 'recovering', 'deceased'
+  maturityWeeks   Int?        // Target weeks to maturity
+  maturitySetDate DateTime?   // Date when maturity target was set
+  notes           String?
+  saleDate        DateTime?
+  salePrice       Float?
+  buyer           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   
   // Relations
   weightRecords PigletWeightRecord[]
@@ -203,12 +205,15 @@ model Event {
   returnDate  DateTime? // for heat/breeding cycles
   metadata    Json?     // flexible field for additional data
   notes       String?
+  resolved    Boolean   @default(false)
+  resolvedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
   @@index([animalId])
   @@index([type])
   @@index([date])
+  @@index([resolved])
 }
 
 // ============ FEED ============
