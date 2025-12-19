@@ -100,6 +100,39 @@
     </div>
   </div>
 
+  <!-- Modal for editing piglet -->
+  <div id="editModal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Edit Piglet</h3>
+      <form id="editForm">
+        <label>Tag Number</label>
+        <input type="text" id="editTagNo" required />
+        <label>Status</label>
+        <select id="editStatus" required>
+          <option value="nursing">Nursing</option>
+          <option value="weaned">Weaned</option>
+          <option value="grower">Grower</option>
+          <option value="finisher">Finisher</option>
+          <option value="ready_for_sale">Ready for Sale</option>
+          <option value="sold">Sold</option>
+        </select>
+        <label>Health Status</label>
+        <select id="editHealth" required>
+          <option value="healthy">Healthy</option>
+          <option value="sick">Sick</option>
+          <option value="recovering">Recovering</option>
+          <option value="deceased">Deceased</option>
+        </select>
+        <label>Notes</label>
+        <textarea id="editNotes" rows="3"></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button type="submit" class="btn">Save Changes</button>
+          <button type="button" class="btn" id="cancelEdit">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="container small">© <span id="year"></span> Pig Farm Management</div>
   </footer>
@@ -140,6 +173,7 @@
         
         renderPigletInfo();
         renderDetails();
+        renderEvents();
       } catch (error) {
         console.error('Error loading piglet:', error);
         document.getElementById('pigletInfo').innerHTML = '<div class="card pad">Error loading piglet</div>';
@@ -158,7 +192,8 @@
     function renderPigletInfo() {
       const farrowDate = currentPiglet.litter?.farrowDate;
       const age = calculateAge(farrowDate);
-      const ageDisplay = age !== null ? `${age} days (${Math.floor(age/7)} weeks)` : 'N/A';
+      const weeks = age !== null ? Math.floor(age/7) : null;
+      const ageDisplay = weeks !== null ? `${weeks} weeks` : 'N/A';
       
       const sowName = currentPiglet.litter?.pregnancy?.sow?.name || currentPiglet.litter?.pregnancy?.sow?.tagNo || 'Unknown';
       const boarName = currentPiglet.litter?.pregnancy?.boar?.name || currentPiglet.litter?.pregnancy?.boar?.tagNo || 'Unknown';
@@ -230,6 +265,27 @@
           })()
         : '-';
 
+      // Calculate previous weight and days since last weigh
+      let previousWeight = '-';
+      let daysSinceWeigh = '-';
+      
+      if (weightRecords.length > 0) {
+        // Sort by date descending
+        const sorted = [...weightRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // Get previous weight (second most recent)
+        if (sorted.length > 1) {
+          previousWeight = sorted[1].weight + ' kg';
+        } else {
+          previousWeight = currentPiglet.birthWeight ? currentPiglet.birthWeight + ' kg' : '-';
+        }
+        
+        // Days since most recent weight record
+        const mostRecent = sorted[0];
+        const daysSince = Math.floor((Date.now() - new Date(mostRecent.date)) / (1000 * 60 * 60 * 24));
+        daysSinceWeigh = daysSince === 0 ? 'Today' : daysSince === 1 ? '1 day ago' : `${daysSince} days ago`;
+      }
+
       pane.innerHTML = `
         <div class="card pad">
           <h3 style="margin-top:0">Growth Metrics</h3>
@@ -243,14 +299,55 @@
               <div style="font-size:20px;font-weight:600">${avgDailyGain} g/day</div>
             </div>
             <div>
-              <div class="small">Total Feed Records</div>
-              <div style="font-size:20px;font-weight:600">${feedRecords.length}</div>
+              <div class="small">Previous Weight</div>
+              <div style="font-size:20px;font-weight:600">${previousWeight}</div>
             </div>
             <div>
-              <div class="small">Weight Measurements</div>
-              <div style="font-size:20px;font-weight:600">${weightRecords.length}</div>
+              <div class="small">Last Weighed</div>
+              <div style="font-size:20px;font-weight:600">${daysSinceWeigh}</div>
             </div>
           </div>
+          
+          ${currentPiglet.maturityWeeks ? (() => {
+            const setDate = currentPiglet.maturitySetDate ? new Date(currentPiglet.maturitySetDate) : new Date();
+            const targetDate = new Date(setDate.getTime() + currentPiglet.maturityWeeks * 7 * 24 * 60 * 60 * 1000);
+            const currentAge = calculateAge(currentPiglet.litter?.farrowDate);
+            const currentWeeks = currentAge ? Math.floor(currentAge / 7) : 0;
+            const progressPercent = Math.min(100, (currentWeeks / currentPiglet.maturityWeeks) * 100);
+            const weeksRemaining = Math.max(0, currentPiglet.maturityWeeks - currentWeeks);
+            const daysRemaining = Math.max(0, Math.ceil((targetDate - Date.now()) / (1000 * 60 * 60 * 24)));
+            
+            let statusColor = '#22c55e'; // green
+            let statusText = 'On Track';
+            if (daysRemaining <= 0) {
+              statusColor = '#ef4444'; // red
+              statusText = 'Maturity Reached!';
+            } else if (daysRemaining <= 7) {
+              statusColor = '#f59e0b'; // orange
+              statusText = 'Nearing Maturity';
+            }
+            
+            return `
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <h4 style="margin:0">Maturity Progress</h4>
+                  <span style="background:${statusColor};color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600">${statusText}</span>
+                </div>
+                <div style="margin:12px 0">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                    <span class="small">${currentWeeks} / ${currentPiglet.maturityWeeks} weeks</span>
+                    <span class="small">${progressPercent.toFixed(0)}%</span>
+                  </div>
+                  <div style="width:100%;height:20px;background:#e5e7eb;border-radius:10px;overflow:hidden">
+                    <div style="width:${progressPercent}%;height:100%;background:${statusColor};transition:width 0.3s"></div>
+                  </div>
+                </div>
+                <div class="small" style="color:#6b7280">
+                  ${daysRemaining > 0 ? `${weeksRemaining} weeks (${daysRemaining} days) remaining` : 'Ready for sale!'}
+                </div>
+              </div>
+            `;
+          })() : ''}
           
           ${currentPiglet.weaningDate ? `
             <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
@@ -283,6 +380,50 @@
           ` : ''}
         </div>
       `;
+    }
+
+    function renderEvents() {
+      const pane = document.getElementById('eventsPane');
+      
+      // Mock upcoming events for now - will be replaced with actual API call
+      const upcomingEvents = [
+        { type: 'Vaccination', date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), description: 'Scheduled vaccination' },
+        { type: 'Weaning', date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), description: 'Estimated weaning date' }
+      ];
+      
+      let html = '<div class="card pad">';
+      html += '<h3 style="margin-top:0">Upcoming Events</h3>';
+      
+      if (upcomingEvents.length === 0) {
+        html += '<div style="color:#6b7280">No upcoming events scheduled</div>';
+      } else {
+        upcomingEvents.forEach(event => {
+          const daysUntil = Math.ceil((event.date - Date.now()) / (1000 * 60 * 60 * 24));
+          html += `
+            <div style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:start">
+                <div>
+                  <div style="font-weight:600">${event.type}</div>
+                  <div class="small" style="color:#6b7280">${event.description}</div>
+                </div>
+                <div class="small" style="text-align:right">
+                  <div>${event.date.toLocaleDateString()}</div>
+                  <div style="color:#22c55e;font-weight:600">In ${daysUntil} days</div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+      
+      html += '<button class="btn" style="width:100%;margin-top:12px" onclick="showPreviousEvents()">Previous Events</button>';
+      html += '</div>';
+      pane.innerHTML = html;
+    }
+
+    function showPreviousEvents() {
+      // Will implement modal for previous events
+      alert('Previous events feature coming soon!');
     }
 
     function renderWeightHistory() {
@@ -341,6 +482,47 @@
       pane.innerHTML = html;
     }
 
+    function renderStatusPane() {
+      const pane = document.getElementById('statusPane');
+      
+      if (!currentPiglet) {
+        pane.innerHTML = '<div class="card pad">Loading status information...</div>';
+        return;
+      }
+
+      let html = '<div class="card pad"><h3 style="margin-top:0">Current Status</h3>';
+      
+      html += `
+        <div style="padding:12px;border-bottom:1px solid #e5e7eb">
+          <div style="font-weight:600">Lifecycle Stage</div>
+          <div style="margin-top:4px">${getStatusBadge(currentPiglet.status)}</div>
+        </div>
+        
+        <div style="padding:12px;border-bottom:1px solid #e5e7eb">
+          <div style="font-weight:600">Health Status</div>
+          <div style="margin-top:4px">${getHealthBadge(currentPiglet.health)}</div>
+        </div>
+        
+        <div style="padding:12px;border-bottom:1px solid #e5e7eb">
+          <div style="font-weight:600">Gender</div>
+          <div style="margin-top:4px;text-transform:capitalize">${currentPiglet.gender || 'N/A'}</div>
+        </div>
+        
+        <div style="padding:12px;border-bottom:1px solid #e5e7eb">
+          <div style="font-weight:600">Breed</div>
+          <div style="margin-top:4px">${currentPiglet.breed || 'N/A'}</div>
+        </div>
+        
+        <div style="padding:12px">
+          <div style="font-weight:600">Notes</div>
+          <div style="margin-top:4px;color:#6b7280">${currentPiglet.notes || 'No notes available'}</div>
+        </div>
+      `;
+      
+      html += '</div>';
+      pane.innerHTML = html;
+    }
+
     function getStatusBadge(status) {
       const badges = {
         'nursing': '<span class="badge" style="background:#93c5fd;color:#1e40af">Nursing</span>',
@@ -356,7 +538,7 @@
     function getHealthBadge(health) {
       const badges = {
         'healthy': '<span class="badge" style="background:#86efac;color:#166534">Healthy</span>',
-        'sick': '<span class="badge" style="background:#fca5a5;color:#991b1b">Sick</span>',
+        'sick': '<span class="badge" style="background:#ef4444;color:#fff">Sick</span>',
         'recovering': '<span class="badge" style="background:#fde047;color:#854d0e">Recovering</span>',
         'deceased': '<span class="badge" style="background:#d1d5db;color:#374151">Deceased</span>',
       };
@@ -366,29 +548,37 @@
     // Tab switching
     function setupTabs() {
       const tabs = {
-        'tabDetails': 'detailsPane',
         'tabWeight': 'weightPane',
         'tabFeed': 'feedPane',
-        'tabEvents': 'eventsPane'
+        'tabStatus': 'statusPane'
       };
 
       Object.keys(tabs).forEach(tabId => {
-        document.getElementById(tabId).addEventListener('click', () => {
-          // Hide all panes
-          Object.values(tabs).forEach(paneId => {
-            document.getElementById(paneId).style.display = 'none';
+        const tabButton = document.getElementById(tabId);
+        if (!tabButton) return; // Skip if button doesn't exist
+        
+        tabButton.addEventListener('click', () => {
+          // Hide all tab panes
+          ['weightPane', 'feedPane', 'statusPane'].forEach(paneId => {
+            const pane = document.getElementById(paneId);
+            if (pane) pane.style.display = 'none';
           });
-          // Remove active class from all tabs
-          Object.keys(tabs).forEach(id => {
-            document.getElementById(id).classList.remove('active');
+          
+          // Remove active class from all tab buttons
+          ['tabWeight', 'tabFeed', 'tabStatus'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.remove('active');
           });
+          
           // Show selected pane and activate tab
-          document.getElementById(tabs[tabId]).style.display = 'block';
-          document.getElementById(tabId).classList.add('active');
+          const selectedPane = document.getElementById(tabs[tabId]);
+          if (selectedPane) selectedPane.style.display = 'block';
+          tabButton.classList.add('active');
           
           // Render content based on tab
           if (tabId === 'tabWeight') renderWeightHistory();
           if (tabId === 'tabFeed') renderFeedHistory();
+          if (tabId === 'tabStatus') renderStatusPane();
         });
       });
     }
@@ -479,10 +669,73 @@
       }
     });
 
+    // Edit button
+    document.getElementById('editBtn').addEventListener('click', () => {
+      if (!currentPiglet) return;
+      
+      // Populate form with current data
+      document.getElementById('editTagNo').value = currentPiglet.tagNo || '';
+      document.getElementById('editStatus').value = currentPiglet.status || 'nursing';
+      document.getElementById('editHealth').value = currentPiglet.healthStatus || 'healthy';
+      document.getElementById('editNotes').value = currentPiglet.notes || '';
+      
+      document.getElementById('editModal').style.display = 'flex';
+    });
+
+    document.getElementById('cancelEdit').addEventListener('click', () => {
+      document.getElementById('editModal').style.display = 'none';
+      document.getElementById('editForm').reset();
+    });
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const data = {
+        tagNo: document.getElementById('editTagNo').value,
+        status: document.getElementById('editStatus').value,
+        healthStatus: document.getElementById('editHealth').value,
+        notes: document.getElementById('editNotes').value || null
+      };
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/piglets/${currentPiglet.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          document.getElementById('editModal').style.display = 'none';
+          document.getElementById('editForm').reset();
+          await loadPiglet(); // Reload to get updated data
+          alert('Piglet updated successfully!');
+        } else {
+          alert('Failed to update piglet');
+        }
+      } catch (error) {
+        console.error('Error updating piglet:', error);
+        alert('Error updating piglet');
+      }
+    });
+
+    // Event button - placeholder for now
+    document.getElementById('addEventBtn').addEventListener('click', () => {
+      alert('Event functionality coming soon! This will allow you to add health checks, vaccinations, treatments, and other events.');
+    });
+
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       loadPiglet();
       setupTabs();
+      
+      // Set Weight History tab as active by default
+      const weightTab = document.getElementById('tabWeight');
+      const weightPane = document.getElementById('weightPane');
+      if (weightTab && weightPane) {
+        weightTab.classList.add('active');
+        weightPane.style.display = 'block';
+      }
+      
       wireActiveNav();
       document.getElementById('year').textContent = new Date().getFullYear();
     });
