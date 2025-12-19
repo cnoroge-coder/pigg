@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface CreatePregnancyDto {
-  sowTag: string;
-  boarTag?: string;
-  breedingDate: string;
-  expectedDate?: string;
+  sowId: string;
+  boarId?: string;
+  dateServed: string;
+  expectedFarrowing?: string;
   status?: string;
   notes?: string;
 }
@@ -27,14 +27,24 @@ export class PregnanciesController {
 
   @Post()
   async create(@Body() createPregnancyDto: CreatePregnancyDto) {
+    // Calculate expected farrowing date if not provided (114 days from breeding)
+    const dateServed = new Date(createPregnancyDto.dateServed);
+    const expectedFarrowing = createPregnancyDto.expectedFarrowing 
+      ? new Date(createPregnancyDto.expectedFarrowing)
+      : new Date(dateServed.getTime() + 114 * 24 * 60 * 60 * 1000);
+
     return this.prisma.pregnancy.create({
       data: {
-        sowTag: createPregnancyDto.sowTag,
-        boarTag: createPregnancyDto.boarTag || null,
-        breedingDate: new Date(createPregnancyDto.breedingDate),
-        expectedDate: createPregnancyDto.expectedDate ? new Date(createPregnancyDto.expectedDate) : null,
-        status: createPregnancyDto.status || 'Expecting',
+        sowId: createPregnancyDto.sowId,
+        boarId: createPregnancyDto.boarId || null,
+        dateServed: dateServed,
+        expectedFarrowing: expectedFarrowing,
+        status: createPregnancyDto.status || 'pregnant',
         notes: createPregnancyDto.notes || null,
+      },
+      include: {
+        sow: true,
+        boar: true,
       },
     });
   }
@@ -42,7 +52,12 @@ export class PregnanciesController {
   @Get()
   async findAll() {
     return this.prisma.pregnancy.findMany({
-      orderBy: { breedingDate: 'desc' },
+      include: {
+        sow: true,
+        boar: true,
+        litter: true,
+      },
+      orderBy: { dateServed: 'desc' },
     });
   }
 
@@ -50,21 +65,32 @@ export class PregnanciesController {
   async findOne(@Param('id') id: string) {
     return this.prisma.pregnancy.findUnique({
       where: { id },
-      include: { litter: true },
+      include: { 
+        sow: true,
+        boar: true,
+        litter: true 
+      },
     });
   }
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateData: Partial<CreatePregnancyDto>) {
+    const dataToUpdate: any = {};
+    
+    if (updateData.sowId) dataToUpdate.sowId = updateData.sowId;
+    if (updateData.boarId !== undefined) dataToUpdate.boarId = updateData.boarId;
+    if (updateData.dateServed) dataToUpdate.dateServed = new Date(updateData.dateServed);
+    if (updateData.expectedFarrowing) dataToUpdate.expectedFarrowing = new Date(updateData.expectedFarrowing);
+    if (updateData.status) dataToUpdate.status = updateData.status;
+    if (updateData.notes !== undefined) dataToUpdate.notes = updateData.notes;
+
     return this.prisma.pregnancy.update({
       where: { id },
-      data: {
-        ...(updateData.sowTag && { sowTag: updateData.sowTag }),
-        ...(updateData.boarTag && { boarTag: updateData.boarTag }),
-        ...(updateData.breedingDate && { breedingDate: new Date(updateData.breedingDate) }),
-        ...(updateData.expectedDate && { expectedDate: new Date(updateData.expectedDate) }),
-        ...(updateData.status && { status: updateData.status }),
-        ...(updateData.notes !== undefined && { notes: updateData.notes }),
+      data: dataToUpdate,
+      include: {
+        sow: true,
+        boar: true,
+        litter: true,
       },
     });
   }
@@ -101,7 +127,12 @@ export class LittersController {
   async findAll() {
     return this.prisma.litter.findMany({
       include: {
-        pregnancy: true,
+        pregnancy: {
+          include: {
+            sow: true,
+            boar: true,
+          },
+        },
       },
       orderBy: { farrowDate: 'desc' },
     });
@@ -112,7 +143,12 @@ export class LittersController {
     return this.prisma.litter.findUnique({
       where: { id },
       include: {
-        pregnancy: true,
+        pregnancy: {
+          include: {
+            sow: true,
+            boar: true,
+          },
+        },
       },
     });
   }

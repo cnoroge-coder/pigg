@@ -132,12 +132,19 @@
     try{
       // First, create or find pregnancy record
       const pregnancyData = {
-        sowTag: mother ? mother.tagNo : 'Unknown',
-        boarTag: father ? father.tagNo : null,
-        breedingDate: new Date(new Date(data.farrowDate).getTime() - (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0], // 114 days before farrow
-        expectedDate: data.farrowDate,
-        status: 'Farrowed'
+        sowId: mother ? mother.id : null,
+        boarId: father ? father.id : null,
+        dateServed: new Date(new Date(data.farrowDate).getTime() - (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0], // 114 days before farrow
+        expectedFarrowing: data.farrowDate,
+        status: 'farrowed'
       };
+      
+      // Validate that we have at least a sow
+      if (!pregnancyData.sowId) {
+        setMessage('Mother is required to create a litter', 'error');
+        if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Litter'; }
+        return;
+      }
       
       // Create pregnancy first
       const pregResponse = await fetch(`${window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1'}/pregnancies`, {
