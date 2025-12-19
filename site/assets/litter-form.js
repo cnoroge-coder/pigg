@@ -16,27 +16,44 @@
     const motherSelect = qs('motherName');
     const fatherSelect = qs('fatherName');
     
-    if(!motherSelect || !fatherSelect) return;
+    if(!motherSelect || !fatherSelect) {
+      console.error('Mother or Father select not found');
+      return;
+    }
+    
+    const { AnimalsModule } = window.Modules;
+    if(!AnimalsModule) {
+      console.error('AnimalsModule not available');
+      return;
+    }
     
     console.log('Populating dropdowns...');
-    console.log('Available sows:', AnimalsModule.sows.length);
-    console.log('Available boars:', AnimalsModule.boars.length);
+    console.log('Available sows:', AnimalsModule.sows ? AnimalsModule.sows.length : 0);
+    console.log('Available boars:', AnimalsModule.boars ? AnimalsModule.boars.length : 0);
     
     // Populate mothers (sows)
-    motherSelect.innerHTML = '<option value="">-- Select Mother --</option>';
-    AnimalsModule.sows.forEach(s=> {
-      const displayName = s.name || s.tagNo || 'Unnamed';
-      console.log('Adding sow:', displayName);
-      motherSelect.append(new Option(displayName, displayName));
-    });
+    motherSelect.innerHTML = '<option value="">-- Optional --</option>';
+    if(AnimalsModule.sows && AnimalsModule.sows.length > 0) {
+      AnimalsModule.sows.forEach(s=> {
+        const displayName = s.name || s.tagNo || 'Unnamed';
+        console.log('Adding sow:', displayName);
+        motherSelect.append(new Option(displayName, displayName));
+      });
+    } else {
+      console.warn('No sows available');
+    }
     
     // Populate fathers (boars)
     fatherSelect.innerHTML = '<option value="">-- Optional --</option>';
-    AnimalsModule.boars.forEach(b=> {
-      const displayName = b.name || b.tagNo || 'Unnamed';
-      console.log('Adding boar:', displayName);
-      fatherSelect.append(new Option(displayName, displayName));
-    });
+    if(AnimalsModule.boars && AnimalsModule.boars.length > 0) {
+      AnimalsModule.boars.forEach(b=> {
+        const displayName = b.name || b.tagNo || 'Unnamed';
+        console.log('Adding boar:', displayName);
+        fatherSelect.append(new Option(displayName, displayName));
+      });
+    } else {
+      console.warn('No boars available');
+    }
     
     console.log('Dropdowns populated!');
   }
@@ -47,13 +64,15 @@
     populateDropdowns();
   });
   
-  // Or if already loaded, populate immediately
-  if(AnimalsModule && AnimalsModule.sows && AnimalsModule.sows.length > 0) {
-    console.log('Animals already loaded, populating immediately');
-    populateDropdowns();
-  } else {
-    console.log('Waiting for animals to load...');
-  }
+  // Try to populate immediately if already loaded
+  setTimeout(() => {
+    if(window.Modules && window.Modules.AnimalsModule && window.Modules.AnimalsModule.all && window.Modules.AnimalsModule.all.length > 0) {
+      console.log('Animals already loaded, populating immediately');
+      populateDropdowns();
+    } else {
+      console.log('Waiting for animals to load...');
+    }
+  }, 500);
 
   function collect(){
     return {
@@ -74,7 +93,6 @@
     const data = collect();
     
     // Basic validation
-    if(!data.motherName){ setMessage('Mother name is required','error'); return; }
     if(!data.farrowDate){ setMessage('Farrow date is required','error'); return; }
     if(!data.numberBorn){ setMessage('Number born is required','error'); return; }
     if(!data.alive){ setMessage('Number alive is required','error'); return; }
@@ -88,14 +106,25 @@
       return;
     }
 
-    // Find the sow and boar by name to get their tags
-    const mother = AnimalsModule.sows.find(s => (s.name || s.tagNo) === data.motherName);
-    if(!mother) {
-      setMessage('Mother not found','error');
-      return;
+    // Find the sow and boar by name to get their tags (if provided)
+    let mother = null;
+    let father = null;
+    
+    if(data.motherName) {
+      mother = AnimalsModule.sows.find(s => (s.name || s.tagNo) === data.motherName);
+      if(!mother) {
+        setMessage('Mother not found','error');
+        return;
+      }
     }
     
-    const father = data.fatherName ? AnimalsModule.boars.find(b => (b.name || b.tagNo) === data.fatherName) : null;
+    if(data.fatherName) {
+      father = AnimalsModule.boars.find(b => (b.name || b.tagNo) === data.fatherName);
+      if(!father) {
+        setMessage('Father not found','error');
+        return;
+      }
+    }
 
     const saveBtn = qs('saveBtn');
     if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
@@ -103,7 +132,7 @@
     try{
       // First, create or find pregnancy record
       const pregnancyData = {
-        sowTag: mother.tagNo,
+        sowTag: mother ? mother.tagNo : 'Unknown',
         boarTag: father ? father.tagNo : null,
         breedingDate: new Date(new Date(data.farrowDate).getTime() - (114 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0], // 114 days before farrow
         expectedDate: data.farrowDate,
