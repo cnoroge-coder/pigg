@@ -18,10 +18,15 @@
     
     if(!motherSelect || !fatherSelect) return;
     
+    console.log('Populating dropdowns...');
+    console.log('Available sows:', AnimalsModule.sows.length);
+    console.log('Available boars:', AnimalsModule.boars.length);
+    
     // Populate mothers (sows)
     motherSelect.innerHTML = '<option value="">-- Select Mother --</option>';
     AnimalsModule.sows.forEach(s=> {
       const displayName = s.name || s.tagNo || 'Unnamed';
+      console.log('Adding sow:', displayName);
       motherSelect.append(new Option(displayName, displayName));
     });
     
@@ -29,15 +34,25 @@
     fatherSelect.innerHTML = '<option value="">-- Optional --</option>';
     AnimalsModule.boars.forEach(b=> {
       const displayName = b.name || b.tagNo || 'Unnamed';
+      console.log('Adding boar:', displayName);
       fatherSelect.append(new Option(displayName, displayName));
     });
+    
+    console.log('Dropdowns populated!');
   }
 
   // Wait for animals loaded event
-  document.addEventListener('animalsLoaded', populateDropdowns);
-  // Or if already loaded
-  if(AnimalsModule.sows && AnimalsModule.sows.length > 0) {
+  document.addEventListener('animalsLoaded', () => {
+    console.log('animalsLoaded event received');
     populateDropdowns();
+  });
+  
+  // Or if already loaded, populate immediately
+  if(AnimalsModule && AnimalsModule.sows && AnimalsModule.sows.length > 0) {
+    console.log('Animals already loaded, populating immediately');
+    populateDropdowns();
+  } else {
+    console.log('Waiting for animals to load...');
   }
 
   function collect(){
