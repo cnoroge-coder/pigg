@@ -45,9 +45,11 @@
   <script src="assets/supa-config.js"></script>
   <script src="assets/supabase-client.js"></script>
   <script src="assets/modules.js"></script>
+  <script src="assets/api-loader.js"></script>
   <script src="assets/app.js"></script>
   <script>
-  document.addEventListener('DOMContentLoaded', ()=>{
+  // Wait for API data to load before rendering
+  window.addEventListener('animalsLoaded', (e) => {
     const { AnimalsModule } = window.Modules;
     const totals = document.getElementById('totals');
     const totalPigs = AnimalsModule.sows.length + AnimalsModule.boars.length + (AnimalsModule.piglets||0);
@@ -121,4 +123,3 @@
   });
   </script>
 </body>
-</html>
