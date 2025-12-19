@@ -86,18 +86,21 @@
     async function loadPiglets() {
       try {
         const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+        console.log('🔄 Loading piglets from:', `${API_BASE_URL}/piglets`);
         const response = await fetch(`${API_BASE_URL}/piglets`);
         
         if (!response.ok) {
-          console.error('Failed to load piglets:', response.status);
+          console.error('❌ Failed to load piglets:', response.status);
           return;
         }
 
         allPiglets = await response.json();
+        console.log('✅ Piglets loaded:', allPiglets.length);
+        console.log('📦 Piglets data:', allPiglets);
         updateCounts();
         renderPiglets();
       } catch (error) {
-        console.error('Error loading piglets:', error);
+        console.error('❌ Error loading piglets:', error);
       }
     }
 

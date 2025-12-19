@@ -89,6 +89,8 @@
     const LITTERS = window.Modules?.AnimalsModule?.litters || [];
     
     console.log('Rendering litters:', LITTERS.length);
+    console.log('Litters data:', LITTERS);
+    console.log('Full Modules object:', window.Modules);
     
     if (LITTERS.length === 0) {
       root.innerHTML = '<div class="card small">No litters recorded yet. <a href="add-litter.html">Add a litter</a></div>';
