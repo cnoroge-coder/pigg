@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Pig Farm — Piglets</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+  <header class="header">
+    <div class="container nav">
+      <button class="back-btn" aria-label="Back" id="backBtn">←</button>
+      <div class="brand"><span class="dot"></span> Pig Farm</div>
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+      <nav class="nav-links">
+        <a href="./">Dashboard</a>
+        <a href="sows.html">Sows</a>
+        <a href="boars.html">Boars</a>
+        <a href="litters.html">Litters</a>
+        <a href="piglets.html">Piglets</a>
+        <a href="feed.html">Feed</a>
+        <a href="events.html">Events</a>
+        <a href="health.html">Health</a>
+        <a href="reports.html">Reports</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding:22px 0 40px">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+      <h2>Piglets</h2>
+      <div style="display:flex;gap:8px">
+        <button id="filterAll" class="btn active">All</button>
+        <button id="filterMale" class="btn">Males</button>
+        <button id="filterFemale" class="btn">Females</button>
+        <a href="add-piglet.html" class="btn" style="text-decoration:none;margin-left:12px">+ Add Piglet</a>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0">
+      <div class="card pad">
+        <div class="small">Total Piglets</div>
+        <div style="font-size:28px;font-weight:700" id="totalCount">0</div>
+      </div>
+      <div class="card pad">
+        <div class="small">Males</div>
+        <div style="font-size:28px;font-weight:700;color:#3b82f6" id="maleCount">0</div>
+      </div>
+      <div class="card pad">
+        <div class="small">Females</div>
+        <div style="font-size:28px;font-weight:700;color:#ec4899" id="femaleCount">0</div>
+      </div>
+      <div class="card pad">
+        <div class="small">Ready for Sale</div>
+        <div style="font-size:28px;font-weight:700;color:#22c55e" id="readyCount">0</div>
+      </div>
+    </div>
+
+    <!-- Piglets Table -->
+    <div class="tr head">
+      <div>Tag</div>
+      <div>Sex</div>
+      <div>Litter</div>
+      <div>Age (days)</div>
+      <div>Current Weight</div>
+      <div>Status</div>
+      <div>Health</div>
+    </div>
+    <div id="pigletsList" class="grid" style="gap:10px"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="container small">© <span id="year"></span> Pig Farm Management</div>
+  </footer>
+
+  <script src="assets/supa-config.js"></script>
+  <script src="assets/supabase-client.js"></script>
+  <script src="assets/api-loader.js"></script>
+  <script src="assets/modules.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    let allPiglets = [];
+    let currentFilter = 'all';
+
+    async function loadPiglets() {
+      try {
+        const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+        const response = await fetch(`${API_BASE_URL}/piglets`);
+        
+        if (!response.ok) {
+          console.error('Failed to load piglets:', response.status);
+          return;
+        }
+
+        allPiglets = await response.json();
+        updateCounts();
+        renderPiglets();
+      } catch (error) {
+        console.error('Error loading piglets:', error);
+      }
+    }
+
+    function updateCounts() {
+      const males = allPiglets.filter(p => p.sex === 'male');
+      const females = allPiglets.filter(p => p.sex === 'female');
+      const ready = allPiglets.filter(p => p.status === 'ready_for_sale');
+
+      document.getElementById('totalCount').textContent = allPiglets.length;
+      document.getElementById('maleCount').textContent = males.length;
+      document.getElementById('femaleCount').textContent = females.length;
+      document.getElementById('readyCount').textContent = ready.length;
+    }
+
+    function calculateAge(litter) {
+      if (!litter || !litter.farrowDate) return null;
+      const farrowDate = new Date(litter.farrowDate);
+      const now = new Date();
+      const diffTime = Math.abs(now - farrowDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+
+    function renderPiglets() {
+      const list = document.getElementById('pigletsList');
+      list.innerHTML = '';
+
+      let filtered = allPiglets;
+      if (currentFilter === 'male') {
+        filtered = allPiglets.filter(p => p.sex === 'male');
+      } else if (currentFilter === 'female') {
+        filtered = allPiglets.filter(p => p.sex === 'female');
+      }
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="card small">No piglets found. <a href="add-piglet.html">Add a piglet</a></div>';
+        return;
+      }
+
+      filtered.forEach(piglet => {
+        const row = document.createElement('div');
+        row.className = 'tr';
+        row.style.cursor = 'pointer';
+
+        const sowName = piglet.litter?.pregnancy?.sow?.name || piglet.litter?.pregnancy?.sow?.tagNo || 'Unknown';
+        const age = calculateAge(piglet.litter);
+        const ageDisplay = age !== null ? age + ' days' : 'N/A';
+        const weight = piglet.currentWeight ? piglet.currentWeight + ' kg' : '-';
+
+        const sexColor = piglet.sex === 'male' ? '#3b82f6' : '#ec4899';
+        const statusBadge = getStatusBadge(piglet.status);
+        const healthBadge = getHealthBadge(piglet.healthStatus);
+
+        row.innerHTML = `
+          <div style="font-weight:600">${piglet.tagNo}</div>
+          <div><span style="color:${sexColor}">●</span> ${piglet.sex}</div>
+          <div class="small">${sowName}</div>
+          <div>${ageDisplay}</div>
+          <div>${weight}</div>
+          <div>${statusBadge}</div>
+          <div>${healthBadge}</div>
+        `;
+
+        row.addEventListener('click', () => {
+          window.location.href = `piglet.html?id=${encodeURIComponent(piglet.id)}`;
+        });
+
+        list.appendChild(row);
+      });
+    }
+
+    function getStatusBadge(status) {
+      const badges = {
+        'nursing': '<span class="badge" style="background:#93c5fd;color:#1e40af">Nursing</span>',
+        'weaned': '<span class="badge" style="background:#fde047;color:#854d0e">Weaned</span>',
+        'fattening': '<span class="badge" style="background:#a78bfa;color:#5b21b6">Fattening</span>',
+        'ready_for_sale': '<span class="badge" style="background:#86efac;color:#166534">Ready</span>',
+        'sold': '<span class="badge" style="background:#d1d5db;color:#374151">Sold</span>',
+        'deceased': '<span class="badge" style="background:#fca5a5;color:#991b1b">Deceased</span>',
+      };
+      return badges[status] || '<span class="badge">' + status + '</span>';
+    }
+
+    function getHealthBadge(health) {
+      const badges = {
+        'healthy': '<span class="badge" style="background:#86efac;color:#166534">●</span>',
+        'sick': '<span class="badge" style="background:#fca5a5;color:#991b1b">●</span>',
+        'recovering': '<span class="badge" style="background:#fde047;color:#854d0e">●</span>',
+        'deceased': '<span class="badge" style="background:#d1d5db;color:#374151">●</span>',
+      };
+      return badges[health] || '<span class="badge">●</span>';
+    }
+
+    // Filter buttons
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPiglets();
+
+      document.getElementById('filterAll').addEventListener('click', () => {
+        currentFilter = 'all';
+        document.querySelectorAll('#filterAll, #filterMale, #filterFemale').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('filterAll').classList.add('active');
+        renderPiglets();
+      });
+
+      document.getElementById('filterMale').addEventListener('click', () => {
+        currentFilter = 'male';
+        document.querySelectorAll('#filterAll, #filterMale, #filterFemale').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('filterMale').classList.add('active');
+        renderPiglets();
+      });
+
+      document.getElementById('filterFemale').addEventListener('click', () => {
+        currentFilter = 'female';
+        document.querySelectorAll('#filterAll, #filterMale, #filterFemale').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('filterFemale').classList.add('active');
+        renderPiglets();
+      });
+
+      wireActiveNav();
+      document.getElementById('year').textContent = new Date().getFullYear();
+    });
+  </script>
+</body>
+</html>
