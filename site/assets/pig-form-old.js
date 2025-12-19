@@ -49,6 +49,7 @@
       fatherTag: qs('fatherTag').value.trim(),
       notes: qs('notes').value.trim()
       ,
+      // include the selected File object (if any) so we can upload it before saving
       photo: (qs('photo') && qs('photo').files && qs('photo').files[0]) ? qs('photo').files[0] : null
     };
   }
@@ -62,15 +63,15 @@
     if(!data.obtainedMethod){ setMessage('Obtained method is required','error'); return; }
     if(data.weight && Number(data.weight) < 0){ setMessage('Weight cannot be negative','error'); return; }
 
-    // If a photo is provided, upload it to Supabase Storage
+    // If a photo is provided, upload it first (direct browser -> Supabase Storage)
     (async function(){
       const saveBtn = qs('saveBtn');
       if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
       try{
         if(data.photo){
           if(!(window && window.sb && window.sb.storage)){
-            console.warn('Supabase storage not available — skipping upload.');
-            setMessage('Storage not available — image not uploaded','warning');
+            console.warn('Supabase client or storage not available on window.sb — skipping upload.');
+            setMessage('Storage client not available — image not uploaded','warning');
           } else {
             try{
               const bucket = 'pigs';
@@ -87,21 +88,23 @@
                 setMessage('Image upload failed — pig saved without image','warning');
               } else if(uploadData){
                 const storedPath = uploadData.path || uploadData.Key || uploadData.fullPath || filename;
-                const pub = window.sb.storage.from(bucket).getPublicUrl(storedPath);
-                console.info('getPublicUrl response:', pub);
-                const publicUrl = pub && pub.data && pub.data.publicUrl ? pub.data.publicUrl : null;
-                if(publicUrl){
-                  data.imageUrl = publicUrl;
-                  console.info('Image uploaded, public url:', publicUrl);
-                } else {
-                  console.warn('Bucket may not be public - no URL returned');
-                  setMessage('Image uploaded but not accessible','warning');
-                }
+                try{
+                  const pub = window.sb.storage.from(bucket).getPublicUrl(storedPath);
+                  console.info('getPublicUrl response:', pub);
+                  const publicUrl = pub && pub.data && pub.data.publicUrl ? pub.data.publicUrl : null;
+                  if(publicUrl){
+                    data.imageUrl = publicUrl;
+                    console.info('Image uploaded, public url:', publicUrl);
+                  } else {
+                    console.warn('getPublicUrl returned no url; bucket may be private.');
+                    setMessage('Image uploaded but bucket is not public','warning');
+                  }
+                }catch(e){ console.warn('getPublicUrl failed', e); setMessage('Failed to get public image URL','warning'); }
               }
             }catch(e){ console.warn('Photo upload error', e); setMessage('Photo upload failed','warning'); }
           }
         } else {
-          console.info('No photo provided.');
+          console.info('No photo provided with the form submission.');
         }
 
         // proceed to add pig even if upload failed or there was no photo
