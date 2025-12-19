@@ -40,28 +40,36 @@ CREATE INDEX IF NOT EXISTS "Litter_pregnancyId_idx" ON "Litter"("pregnancyId");
 ALTER TABLE "Pregnancy" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Litter" ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (to avoid errors)
+DROP POLICY IF EXISTS "Allow public read on Pregnancy" ON "Pregnancy";
+DROP POLICY IF EXISTS "Allow public insert on Pregnancy" ON "Pregnancy";
+DROP POLICY IF EXISTS "Allow public update on Pregnancy" ON "Pregnancy";
+DROP POLICY IF EXISTS "Allow public read on Litter" ON "Litter";
+DROP POLICY IF EXISTS "Allow public insert on Litter" ON "Litter";
+DROP POLICY IF EXISTS "Allow public update on Litter" ON "Litter";
+
 -- Allow public read access (adjust based on your security needs)
-CREATE POLICY IF NOT EXISTS "Allow public read on Pregnancy"
+CREATE POLICY "Allow public read on Pregnancy"
   ON "Pregnancy" FOR SELECT
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "Allow public insert on Pregnancy"
+CREATE POLICY "Allow public insert on Pregnancy"
   ON "Pregnancy" FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "Allow public update on Pregnancy"
+CREATE POLICY "Allow public update on Pregnancy"
   ON "Pregnancy" FOR UPDATE
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "Allow public read on Litter"
+CREATE POLICY "Allow public read on Litter"
   ON "Litter" FOR SELECT
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "Allow public insert on Litter"
+CREATE POLICY "Allow public insert on Litter"
   ON "Litter" FOR INSERT
   WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "Allow public update on Litter"
+CREATE POLICY "Allow public update on Litter"
   ON "Litter" FOR UPDATE
   USING (true);
 
