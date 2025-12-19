@@ -55,7 +55,12 @@
     
     // Wait for animals to be loaded from API
     function loadPigData() {
-      const { AnimalsModule, EventsModule } = window.Modules;
+      if (!window.Modules || !window.Modules.AnimalsModule) {
+        qs('detailContent').textContent = 'Loading...';
+        return;
+      }
+      
+      const AnimalsModule = window.Modules.AnimalsModule;
       const pig = AnimalsModule.getByTag(tag) || AnimalsModule.getSow(tag) || AnimalsModule.boars.find(b=>b.tagNo===tag);
       if(!pig) return qs('detailContent').textContent = 'Pig not found';
 
@@ -118,7 +123,14 @@
     // Render inline events and pregnancies
     function renderEventsInline(targetId='eventsList', allowEmptyMessage=true){
       const eventsRoot = qs(targetId); if(!eventsRoot) return; eventsRoot.innerHTML='';
-      const all = EventsModule.getFor(pig.tagNo) || [];
+      
+      // Check if EventsModule exists
+      if (!window.Modules || !window.Modules.EventsModule) {
+        if(allowEmptyMessage) eventsRoot.innerHTML='<div class="small">No events available</div>';
+        return;
+      }
+      
+      const all = window.Modules.EventsModule.getFor(pig.tagNo) || [];
       const today = new Date(); today.setHours(0,0,0,0);
       const upcoming = all.filter(e=> new Date(e.date).setHours(0,0,0,0) >= today).sort((a,b)=> new Date(a.date)-new Date(b.date));
       if(upcoming.length===0){ if(allowEmptyMessage) eventsRoot.innerHTML='<div class="small">No upcoming events for this pig</div>'; return; }
@@ -352,7 +364,9 @@
             returnDate: qs('e_returnDate').value || '',
             notes: qs('e_notes').value.trim()
           };
-          EventsModule.addEvent(newEv);
+          if (window.Modules && window.Modules.EventsModule) {
+            window.Modules.EventsModule.addEvent(newEv);
+          }
           toggleAddForm();
           renderEventsInline();
         });
