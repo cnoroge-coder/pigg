@@ -60,6 +60,11 @@
           <option value="Other">Other</option>
         </select>
         
+        <div id="customEventTypeArea" style="display:none;margin-top:8px">
+          <label>Custom Event Type *</label>
+          <input type="text" id="customEventType" placeholder="Enter event type..." style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:4px" />
+        </div>
+        
         <label>Apply To *</label>
         <select id="eventTarget" required>
           <option value="piglet">Individual Piglet</option>
@@ -282,6 +287,22 @@
       document.getElementById('addEventModal').style.display = 'none';
       document.getElementById('addEventForm').reset();
       document.getElementById('targetSelectionArea').innerHTML = '';
+      document.getElementById('customEventTypeArea').style.display = 'none';
+    });
+
+    // Event type selection - show custom input for "Other"
+    document.getElementById('eventType').addEventListener('change', (e) => {
+      const customArea = document.getElementById('customEventTypeArea');
+      const customInput = document.getElementById('customEventType');
+      
+      if (e.target.value === 'Other') {
+        customArea.style.display = 'block';
+        customInput.required = true;
+      } else {
+        customArea.style.display = 'none';
+        customInput.required = false;
+        customInput.value = '';
+      }
     });
 
     // Event target selection
@@ -333,8 +354,20 @@
     document.getElementById('addEventForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
+      let eventType = document.getElementById('eventType').value;
+      
+      // Use custom type if "Other" is selected
+      if (eventType === 'Other') {
+        const customType = document.getElementById('customEventType').value.trim();
+        if (!customType) {
+          alert('Please enter a custom event type');
+          return;
+        }
+        eventType = customType;
+      }
+      
       const eventData = {
-        type: document.getElementById('eventType').value,
+        type: eventType,
         date: document.getElementById('eventDate').value,
         notes: document.getElementById('eventNotes').value || null
       };
@@ -366,13 +399,16 @@
           document.getElementById('addEventModal').style.display = 'none';
           document.getElementById('addEventForm').reset();
           document.getElementById('targetSelectionArea').innerHTML = '';
+          document.getElementById('customEventTypeArea').style.display = 'none';
           await loadEvents();
         } else {
-          alert('Failed to add event');
+          const errorText = await response.text();
+          console.error('Failed to add event:', response.status, errorText);
+          alert('Failed to add event. The backend endpoint may not be ready yet.');
         }
       } catch (error) {
         console.error('Error adding event:', error);
-        alert('Error adding event');
+        alert('Error adding event. Make sure the backend server is running.');
       }
     });
 

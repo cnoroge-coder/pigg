@@ -135,6 +135,10 @@
           <option value="Breeding">Breeding</option>
           <option value="Other">Other</option>
         </select>
+        <div id="customBoarEventTypeArea" style="display:none;margin-top:8px">
+          <label style="display:block;font-weight:600">Custom Event Type</label>
+          <input type="text" id="customBoarEventType" placeholder="Enter event type..." style="width:100%;padding:8px;margin:8px 0;border:1px solid #d1d5db;border-radius:4px" />
+        </div>
         <label style="display:block;margin-top:12px;font-weight:600">Date</label>
         <input type="date" id="boarEventDate" style="width:100%;padding:8px;margin:8px 0;border:1px solid #d1d5db;border-radius:4px" />
         <label style="display:block;margin-top:12px;font-weight:600">Notes</label>
@@ -148,6 +152,17 @@
     
     document.body.appendChild(modal);
     document.getElementById('boarEventDate').valueAsDate = new Date();
+    
+    // Handle Other event type
+    document.getElementById('boarEventType').addEventListener('change', (e) => {
+      const customArea = document.getElementById('customBoarEventTypeArea');
+      if (e.target.value === 'Other') {
+        customArea.style.display = 'block';
+      } else {
+        customArea.style.display = 'none';
+        document.getElementById('customBoarEventType').value = '';
+      }
+    });
 
     document.getElementById('cancelBoarEvent').addEventListener('click', () => {
       modal.remove();
@@ -156,8 +171,19 @@
     document.getElementById('saveBoarEvent').addEventListener('click', async () => {
       const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
       
+      let eventType = document.getElementById('boarEventType').value;
+      
+      if (eventType === 'Other') {
+        const customType = document.getElementById('customBoarEventType').value.trim();
+        if (!customType) {
+          alert('Please enter a custom event type');
+          return;
+        }
+        eventType = customType;
+      }
+      
       const eventData = {
-        type: document.getElementById('boarEventType').value,
+        type: eventType,
         date: document.getElementById('boarEventDate').value,
         notes: document.getElementById('boarEventNotes').value || null,
         boarTags: Array.from(selectedBoars)

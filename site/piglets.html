@@ -34,6 +34,7 @@
         <button id="filterMale" class="btn">Males</button>
         <button id="filterFemale" class="btn">Females</button>
         <button id="maturityBtn" class="btn" style="margin-left:12px;background:#8b5cf6;border-color:#7c3aed;color:#fff">Maturity</button>
+        <button id="bulkDeleteBtn" class="btn" style="background:#ef4444;border-color:#dc2626;color:#fff">Delete Selected</button>
         <a href="add-piglet.html" class="btn" style="text-decoration:none">+ Add Piglet</a>
       </div>
     </div>
@@ -227,24 +228,46 @@
 
     // Maturity tracking functionality
     let maturityMode = false;
+    let deleteMode = false;
     let selectedPiglets = new Set();
 
     document.getElementById('maturityBtn').addEventListener('click', () => {
       maturityMode = !maturityMode;
+      deleteMode = false;
       selectedPiglets.clear();
       
       if (maturityMode) {
         document.getElementById('maturityBtn').textContent = 'Done Selecting';
         document.getElementById('maturityBtn').style.background = '#22c55e';
+        document.getElementById('bulkDeleteBtn').style.display = 'none';
         renderPigletsWithCheckboxes();
       } else {
         document.getElementById('maturityBtn').textContent = 'Maturity';
         document.getElementById('maturityBtn').style.background = '#8b5cf6';
+        document.getElementById('bulkDeleteBtn').style.display = 'inline-block';
+        renderPiglets();
+      }
+    });
+    
+    document.getElementById('bulkDeleteBtn').addEventListener('click', () => {
+      deleteMode = !deleteMode;
+      maturityMode = false;
+      selectedPiglets.clear();
+      
+      if (deleteMode) {
+        document.getElementById('bulkDeleteBtn').textContent = 'Done Selecting';
+        document.getElementById('bulkDeleteBtn').style.background = '#22c55e';
+        document.getElementById('maturityBtn').style.display = 'none';
+        renderPigletsWithCheckboxes(true); // Pass true for delete mode
+      } else {
+        document.getElementById('bulkDeleteBtn').textContent = 'Delete Selected';
+        document.getElementById('bulkDeleteBtn').style.background = '#ef4444';
+        document.getElementById('maturityBtn').style.display = 'inline-block';
         renderPiglets();
       }
     });
 
-    function renderPigletsWithCheckboxes() {
+    function renderPigletsWithCheckboxes(isDeleteMode = false) {
       const list = document.getElementById('pigletsList');
       list.innerHTML = '';
 
@@ -260,13 +283,21 @@
         return;
       }
 
-      // Add header with "Set Maturity" button
+      // Add header with action button
       const header = document.createElement('div');
       header.style.cssText = 'margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
-      header.innerHTML = `
-        <div class="small">${selectedPiglets.size} selected</div>
-        <button id="setMaturityBtn" class="btn" ${selectedPiglets.size === 0 ? 'disabled' : ''}>Set Maturity Weeks</button>
-      `;
+      
+      if (isDeleteMode) {
+        header.innerHTML = `
+          <div class="small">${selectedPiglets.size} selected</div>
+          <button id="confirmDeleteBtn" class="btn" style="background:#ef4444;border-color:#dc2626;color:#fff" ${selectedPiglets.size === 0 ? 'disabled' : ''}>Delete ${selectedPiglets.size} Piglet(s)</button>
+        `;
+      } else {
+        header.innerHTML = `
+          <div class="small">${selectedPiglets.size} selected</div>
+          <button id="setMaturityBtn" class="btn" ${selectedPiglets.size === 0 ? 'disabled' : ''}>Set Maturity Weeks</button>
+        `;
+      }
       list.appendChild(header);
 
       filtered.forEach(piglet => {
@@ -290,7 +321,17 @@
             selectedPiglets.delete(piglet.id);
           }
           header.querySelector('.small').textContent = `${selectedPiglets.size} selected`;
-          document.getElementById('setMaturityBtn').disabled = selectedPiglets.size === 0;
+          
+          if (isDeleteMode) {
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            if (deleteBtn) {
+              deleteBtn.disabled = selectedPiglets.size === 0;
+              deleteBtn.textContent = `Delete ${selectedPiglets.size} Piglet(s)`;
+            }
+          } else {
+            const matBtn = document.getElementById('setMaturityBtn');
+            if (matBtn) matBtn.disabled = selectedPiglets.size === 0;
+          }
         });
 
         const content = document.createElement('div');
@@ -308,9 +349,84 @@
         list.appendChild(row);
       });
 
-      // Wire up Set Maturity button
-      document.getElementById('setMaturityBtn').addEventListener('click', () => {
-        showMaturityModal();
+      // Wire up action button
+      if (isDeleteMode) {
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        if (confirmDeleteBtn) {
+          confirmDeleteBtn.addEventListener('click', () => {
+            showDeleteConfirmModal();
+          });
+        }
+      } else {
+        const setMaturityBtn = document.getElementById('setMaturityBtn');
+        if (setMaturityBtn) {
+          setMaturityBtn.addEventListener('click', () => {
+            showMaturityModal();
+          });
+        }
+      }
+    }
+    
+    function showDeleteConfirmModal() {
+      const API_BASE_URL = window.API_BASE_URL || 'https://pig-3k5m.onrender.com/api/v1';
+      const modal = document.createElement('div');
+      modal.id = 'deleteConfirmModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:1000';
+      
+      modal.innerHTML = `
+        <div style="background:white;padding:24px;border-radius:8px;max-width:400px;width:90%">
+          <h3 style="margin-top:0;color:#ef4444">Confirm Deletion</h3>
+          <p>Are you sure you want to delete ${selectedPiglets.size} piglet(s)? This action cannot be undone.</p>
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn" id="confirmDeleteAction" style="background:#ef4444;border-color:#dc2626;color:#fff">Delete</button>
+            <button class="btn" id="cancelDelete">Cancel</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      document.getElementById('cancelDelete').addEventListener('click', () => {
+        modal.remove();
+      });
+      
+      document.getElementById('confirmDeleteAction').addEventListener('click', async () => {
+        const pigletIds = Array.from(selectedPiglets);
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const pigletId of pigletIds) {
+          try {
+            const response = await fetch(`${API_BASE_URL}/piglets/${pigletId}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (response.ok) {
+              successCount++;
+            } else {
+              errorCount++;
+              console.error(`Failed to delete piglet ${pigletId}`);
+            }
+          } catch (error) {
+            errorCount++;
+            console.error(`Error deleting piglet ${pigletId}:`, error);
+          }
+        }
+        
+        modal.remove();
+        
+        if (successCount > 0) {
+          alert(`Successfully deleted ${successCount} piglet(s)${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+          deleteMode = false;
+          selectedPiglets.clear();
+          document.getElementById('bulkDeleteBtn').textContent = 'Delete Selected';
+          document.getElementById('bulkDeleteBtn').style.background = '#ef4444';
+          document.getElementById('maturityBtn').style.display = 'inline-block';
+          window.location.reload(); // Refresh page to show updated list
+        } else {
+          alert('Failed to delete piglets. Please try again.');
+        }
       });
     }
 
